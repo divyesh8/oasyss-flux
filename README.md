@@ -71,16 +71,22 @@ Modern online technical hiring and proctored coding assessments have ruthless mo
 
 ## 🚀 Quick Start (Zero Setup Needed)
 
-Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. That's why a pre-compiled standalone executable is included directly in this repository.
+Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. That's why a pre-compiled standalone executable is placed directly in the **[`Release/`](Release/)** folder.
 
-### Just Run:
-1. Download or clone this repository.
-2. Open the folder and double-click **`Oasyss Flux.exe`**.
-3. *Bas, khel khatam!* The overlay launches immediately.
+### 📥 1-Click Download & Run:
+1. Go directly to the **[`Release/`](Release/)** folder in this repository.
+2. Download [**`Release/Oasyss Flux.exe`**](Release/Oasyss%20Flux.exe) (or clone the repo).
+3. Double-click **`Oasyss Flux.exe`**.
+4. *Bas, khel khatam!* The overlay launches immediately.
 
 > [!TIP]
 > **No installation wizard. No .NET SDK required.** 
-> `Oasyss Flux.exe` is completely self-contained (~79 MB) with the runtime and native libraries bundled inside.
+> `Release/Oasyss Flux.exe` is completely self-contained (~79 MB) with the runtime and native libraries bundled inside.
+
+---
+
+### 📦 GitHub Releases (Alternative 1-Click Link)
+When you publish this repo to GitHub, you can also attach `Oasyss Flux.exe` to a [GitHub Release](https://github.com/) tag so visitors can download it directly from the repo's homepage sidebar with a single click.
 
 ---
 
@@ -130,7 +136,8 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 ```
 oasyss-flux/
-├── Oasyss Flux.exe           # Standalone pre-built executable (zero setup)
+├── Release/
+│   └── Oasyss Flux.exe       # Standalone pre-built executable (download & run directly)
 ├── AiChatService.cs          # Multi-provider AI brain (Gemini, ChatGPT, Groq)
 ├── MainWindow.xaml / .cs     # Win32 ghost hooks, WebView2 tabs, opacity controls
 ├── App.xaml / App.xaml.cs    # Application entry point & lifecycle
