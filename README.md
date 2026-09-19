@@ -162,4 +162,8 @@ Distributed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENS
 
 **Built for candidates and coders who believe in smart work over panic. Interview clear karo, tension mat lo. Zero scene, pure clutch.**
 
+<br/>
+
+**If this saved your technical round or coding exam, don't forget to drop a ⭐ on this repo!**
+
 </div>
