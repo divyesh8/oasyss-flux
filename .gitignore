@@ -5,6 +5,8 @@
 [Ll]ogs/
 publish/
 publish-single/
+publish-compressed/
+publish-pure-single/
 
 ## Visual Studio cache & user files
 .vs/
@@ -15,9 +17,11 @@ publish-single/
 *.ide/
 
 ## Large binaries
-*.exe
 *.dll
 *.pdb
+
+# Allow the pre-built standalone executable
+!Oasyss Flux.exe
 
 ## OS generated files
 Thumbs.db

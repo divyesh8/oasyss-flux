@@ -74,16 +74,21 @@ Designed for gamers, streamers, programmers, and multitaskers, Oasyss Flux deliv
 
 ---
 
-## 🚀 Installation & Setup Guide
+## 🚀 Getting Started
 
-### Method 1: Running the Pre-built Release
-1. Download the latest release from the [Releases](https://github.com/) page.
-2. Extract the archive to any folder on your PC.
-3. Run `Oasyss Flux.exe`.
+### ⚡ Instant Run (Zero Installation Required!)
+The repository includes a ready-to-run, standalone executable: **`Oasyss Flux.exe`**.
+
+1. Download or clone this repository.
+2. Double-click **`Oasyss Flux.exe`**.
+3. That's it!
+
+> [!TIP]
+> **No setup wizard or .NET SDK installation needed.** The included `Oasyss Flux.exe` is completely self-contained with the .NET 8 runtime and all dependencies bundled inside.
 
 ---
 
-### Method 2: Building from Source (.NET CLI)
+### 🛠️ Building from Source (Optional / For Developers)
 
 #### Prerequisites
 Ensure the .NET 8 SDK is installed:
