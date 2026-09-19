@@ -4,216 +4,142 @@
 
 ![Oasyss Flux Logo](logo.png)
 
-**Next-Gen Stealth Overlay Web Browser & Multi-Model AI Workspace for Windows**
+### **The Stealth Overlay & AI Weapon for the Back-Row Squad**
+*Screen-share bypass. Zero alt-tab risk. Instant AI clutch. No cap.*
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](https://microsoft.com/windows)
-[![Runtime](https://img.shields.io/badge/.NET-8.0%20WPF-512BD4.svg)](https://dotnet.microsoft.com/)
-[![Engine](https://img.shields.io/badge/Engine-Microsoft%20WebView2%20(Chromium)-0078D7.svg)](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+[![Stealth](https://img.shields.io/badge/Ghost%20Mode-WDA__EXCLUDEFROMCAPTURE-red.svg)](#-ghost-mode--anti-screen-share-stealth)
+[![Setup](https://img.shields.io/badge/Setup-Zero%20Braincells%20(Just%20Double--Click)-brightgreen.svg)](#-quick-run-for-the-aalsi-batch)
+[![Vibe](https://img.shields.io/badge/Target-Last--Night%20Syllabus%20Warriors-orange.svg)](#-disclaimer-topper-gang-dur-raho)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
-[![Stealth](https://img.shields.io/badge/Capture%20Bypass-WDA__EXCLUDEFROMCAPTURE-red.svg)](#-stealth--capture-protection)
 
 </div>
 
 ---
 
-## 📖 Overview
+## 🚫 DISCLAIMER: TOPPER GANG DUR RAHO
 
-**Oasyss Flux** (internally known as *Evadus Lite*) is a lightweight, frameless overlay web browser and AI companion engineered for Windows. Built using **C#**, **WPF**, and **Microsoft Edge WebView2 (Chromium)**, it floats seamlessly over your desktop, games, and full-screen applications without disrupting your workflow or cluttering the Windows taskbar.
-
-Designed for gamers, streamers, programmers, and multitaskers, Oasyss Flux delivers instant web search, documentation lookup, walkthrough guides, and AI assistance with a single hotkey press—**all while remaining completely invisible to screen capture and streaming software.**
-
----
-
-## ✨ Key Features
-
-### 🛡️ Stealth & Capture Protection (Screen Invisibility)
-- **Zero Stream Leakage**: Utilizes Windows Native Display Affinity API (`WDA_EXCLUDEFROMCAPTURE`) to make the browser overlay completely invisible to screen recording and streaming tools.
-- **Works with All Major Capture Software**: Stream or record with **OBS Studio, Discord Screen Share, Zoom, Microsoft Teams, NVIDIA ShadowPlay, Twitch Studio, and Windows Game Bar** without the browser overlay or your notes appearing on stream.
-- **Hidden from Taskbar**: Runs in stealth tool window mode (`ShowInTaskbar="False"`), leaving no taskbar footprint.
-
-### 🤖 Integrated Multi-Provider AI Assistant
-- Built-in slide-out AI assistant drawer accessible at any time without leaving your active window.
-- Supports leading AI model providers with your own API keys:
-  - **Google Gemini**: Gemini 3.6 Flash / Gemini 1.5 Flash (free tier friendly)
-  - **OpenAI ChatGPT**: GPT-4o, GPT-4o Mini, GPT-3.5 Turbo
-  - **Groq Cloud**: Ultra-fast LLM inference (Llama 3.1 70B, Llama 3.1 8B, Mixtral 8x7B, Gemma 2 9B)
-- Full conversational memory with easy provider and model hot-switching.
-
-### 🌐 Chromium Multi-Tab Engine
-- Powered by **Microsoft Edge WebView2**, offering full modern web standard support (HTML5, WebGL, WebSockets, extensions/cookie isolation).
-- Dynamic tab creation, tab reordering via drag-and-drop, and tab close controls.
-- Fast navigation bar with reload, back, forward, URL autocomplete, and search integration.
-
-### ⚡ Global Hotkey & Quick Access
-- **System-Wide Hotkey Hook**: Summon or dismiss the overlay from anywhere with `Shift + Alt + Z` (configurable in settings).
-- **Auto-Minimize on Focus Loss**: Automatically drops into stealth mode when you click outside or return to your primary application (can be toggled in settings).
-
-### 🪟 Adjustable Transparency & Neon Aesthetics
-- **Transparent Mode**: Toggle variable window transparency (`_transparencyLevel`) so you can read tutorials, chats, or guides while seeing your game or work underneath.
-- **Cyberpunk UI Theme**: Neon accents, glassmorphic dark styling, customizable theme tones, and an animated intro sequence (`intro.mp4`).
-
-### 🔇 Privacy & Audio Management
-- **Instant Global Mute**: One-click audio mute/unmute across all active browser tabs.
-- **Isolated User Profile**: Web session data and cache are stored safely in an isolated profile directory in `%LocalAppData%`.
-
-### 📸 Built-in Screenshot Gallery & Bookmarks
-- **Instant Snapshot**: Built-in screenshot tool to grab references.
-- **Thumbnail Gallery Tray**: Visual dock displaying captured screenshots for quick reference.
-- **Bookmarks Bar**: Save favorite sites with auto-fetched favicons for one-click access.
+> [!WARNING]
+> **Agar tum front bench pe baith ke 4-color pen se notes banate ho, assignment deadline se 3 din pehle submit karte ho, aur 98% attendance ke liye rote ho... bhai repo band karke library jao. This is NOT for you.**
+>
+> This weapon is strictly crafted for the last-minute crammers, late-night clutch gods, gamers hiding behind zoom calls, and backbenchers who survive every semester on pure jugaad. 
+> 
+> *Mana batch ki idhe ultimate cheat code. Full stealth, zero scene.*
 
 ---
 
-## 🛠️ System Requirements
+## 👁️ What is this Scene? (Overview)
 
-| Component | Requirement |
-|---|---|
-| **Operating System** | Windows 10 (v19041+) or Windows 11 (64-bit recommended) |
-| **Runtime** | [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) |
-| **Web Engine** | [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) *(Pre-installed on Windows 11 and modern Windows 10)* |
-| **SDK (for building)** | [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) |
+Oasyss Flux is a frameless, transparent stealth overlay browser + multi-model AI assistant designed for Windows. It hovers silently on top of any game, lab software, proctor window, or full-screen app. It leaves zero traces on the Windows taskbar, doesn't mess with your active window focus, and vanishes in a split second whenever you need it to.
+
+Whether you're stuck in a boring lecture, writing an assignment at 3 AM, or grinding ranked games while keeping walkthroughs & chats open—yeh browser quietly floats without getting in your way.
 
 ---
 
-## 🚀 Getting Started
+## 🔥 Savage Features
 
-### ⚡ Instant Run (Zero Installation Required!)
-The repository includes a ready-to-run, standalone executable: **`Oasyss Flux.exe`**.
+### 👻 Ghost Mode / Anti-Screen-Share Stealth
+- **Zoom / Discord / Teams / OBS me full gayab**: Uses Windows native `WDA_EXCLUDEFROMCAPTURE` display affinity.
+- Jab tum screen share kar rahe ho ya lab proctor screen monitor kar raha hai—**unko sirf tumhara clean desktop ya code editor dikhega**. Tumhara floating browser screen capture me record hi nahi hoga.
+- Screen recording lo dikhega hi nahi bro, full invisible scene.
 
-1. Download or clone this repository.
-2. Double-click **`Oasyss Flux.exe`**.
-3. That's it!
+### 🤖 Built-In AI Sidekick Drawer (Gemini + ChatGPT + Groq)
+- Assignment ka question samajh nahi aa raha? Exam code fat raha hai?
+- Alt-tab karke search karne ka risk mat lo. Side drawer kholo, prompt daalo, answer lo, drawer close karo.
+- Hot-switch between **Google Gemini**, **OpenAI ChatGPT**, and lightning-fast **Groq** (Llama 3.1 70B). Sab setting ek jagah.
+
+### ⚡ Panic Key (`Shift + Alt + Z`)
+- Professor, invigilator, ya parents room me enter hue? 
+- One instant tap on <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> and the whole window vanishes instantly into the void.
+
+### 🪟 Transparency / See-Through Mode
+- Full screen game ya IDE chal raha hai? Slider kheecho aur opacity low kardo.
+- You can literally read docs, cheat sheets, or anime subtitles *through* the browser while looking at your game or code behind it.
+
+### 🔇 1-Tap Sannata (Global Audio Mute)
+- Random web page pe annoying video ya loud ad bajne laga?
+- Ek click pe poore browser ka audio silent. Zero panic, zero awkwardness in class.
+
+### 📸 Screenshot Vault & Favicon Bookmarks
+- Slides or questions ka instant screenshot maaro, dock tray me thumbnails collect honge for quick reference.
+- Important resources ek click pe bookmarks bar me save ho jaate hain with auto-fetched site logos.
+
+---
+
+## ⚡ Quick Run for the Aalsi Batch
+
+Humko pata hai .NET SDK install karna, environment path set karna, aur build commands run karna bohot bada headache hai. Isliye directly ready-to-use executable bana ke yahi repo me daal diya hai.
+
+### Just Run:
+1. Repo download ya clone karo.
+2. Folder me **`Oasyss Flux.exe`** dikhega.
+3. Uspe **Double-Click** maaro.
+4. Khel khatam! App instantly chalega.
 
 > [!TIP]
-> **No setup wizard or .NET SDK installation needed.** The included `Oasyss Flux.exe` is completely self-contained with the .NET 8 runtime and all dependencies bundled inside.
+> **No installation wizard. No .NET SDK needed.** 
+> The included `Oasyss Flux.exe` is completely self-contained (~79 MB). Sab kuch andar bundled hai, plug-and-play scene.
 
 ---
 
-### 🛠️ Building from Source (Optional / For Developers)
+## ⌨️ Shortcuts (Ratta Maar Lo)
 
-#### Prerequisites
-Ensure the .NET 8 SDK is installed:
-```powershell
-dotnet --version
-```
-*(Should output `8.0.xxx` or higher)*
+| Keybind | Scene / Action |
+|---|---|
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> | **Panic Button**: Instant Hide / Reveal Overlay |
+| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Naya Tab Kholo |
+| <kbd>Ctrl</kbd> + <kbd>W</kbd> | Current Tab Band Karo |
+| <kbd>Ctrl</kbd> + <kbd>R</kbd> / <kbd>F5</kbd> | Page Refresh |
+| <kbd>Esc</kbd> | Open Popups / Slide Menus Dismiss Karo |
 
-#### 1. Clone the Repository
-```powershell
-git clone https://github.com/your-username/oasyss-flux.git
-cd oasyss-flux
-```
+---
 
-#### 2. Restore Dependencies & Build
+## 🔑 AI Key Setup (Free Me Kaha Se Milega?)
+
+1. Top bar pe **Settings** (⚙️) icon dabaao.
+2. **AI Configuration** me jao.
+3. Free API keys yaha se uthaao:
+   - **Google Gemini**: [Google AI Studio](https://aistudio.google.com/apikey) *(Free tier best hai, unlimited questions)*
+   - **Groq Cloud**: [Groq Console](https://console.groq.com/keys) *(Instant ultra-fast Llama 3 answers)*
+   - **OpenAI**: [OpenAI Platform](https://platform.openai.com/api-keys)
+4. Key paste karo aur Save maaro. Drawer kholo aur AI se kaam karwao.
+
+---
+
+## 🛠️ For The Curious Nerds (Build From Source)
+
+Agar tumko khud code modify karke build karna hai:
+
 ```powershell
+# Restore & Build
 dotnet restore
 dotnet build -c Release
-```
 
-#### 3. Run Directly
-```powershell
+# Run
 dotnet run -c Release
+
+# Ekdum standalone single-file exe compile karne ke liye:
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:AssemblyName="Oasyss Flux" -o ./publish
 ```
 
 ---
 
-### Method 3: Publishing an Executable
-
-#### Framework-Dependent Build (Lightweight ~15 MB)
-*Requires .NET 8 Runtime and Edge WebView2 on the target machine:*
-```powershell
-dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:AssemblyName="Oasyss Flux" -o ./publish
-```
-
-#### Fully Self-Contained Build (Standalone Single .exe)
-*Includes the .NET runtime bundled inside. Works out-of-the-box on any clean Windows machine:*
-```powershell
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:AssemblyName="Oasyss Flux" -o ./publish-single
-```
-
----
-
-## 🎮 User Guide & Controls
-
-### Default Keyboard Shortcuts
-
-| Shortcut | Action |
-|---|---|
-| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> | **Toggle Overlay** (Show / Hide Oasyss Flux) |
-| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Open New Tab |
-| <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Current Tab |
-| <kbd>Ctrl</kbd> + <kbd>R</kbd> or <kbd>F5</kbd> | Reload Page |
-| <kbd>Esc</kbd> | Close Dialogs / Slide Menus |
-
-### Configuring AI Providers
-
-1. Open Oasyss Flux.
-2. Click the **Settings** gear icon (⚙️) on the title bar.
-3. Go to the **AI Configuration** section.
-4. Input your API key for your desired provider:
-   - **Gemini**: Obtain a free API key at [Google AI Studio](https://aistudio.google.com/apikey).
-   - **ChatGPT**: Obtain an API key from [OpenAI Platform](https://platform.openai.com/api-keys).
-   - **Groq**: Obtain a free high-speed API key at [Groq Console](https://console.groq.com/keys).
-5. Select your default provider and model, then click **Save**.
-6. Open the AI drawer via the AI chat button on the top-right to start chatting!
-
-### Overlay & Transparency Mode
-
-- **Moving the Window**: Click and hold any blank area on the top title bar or window border to drag the overlay anywhere across your screens.
-- **Transparency Slider**: Click the transparency button to adjust window see-through opacity (from 10% to 100%).
-- **Audio Control**: Click the speaker icon on the top right to instantly silence all web audio.
-
----
-
-## 📂 Project Architecture
+## 📂 Project Structure
 
 ```
 oasyss-flux/
-├── AiChatService.cs          # Multi-provider AI chat orchestrator (Gemini, OpenAI, Groq)
-├── App.xaml / App.xaml.cs    # Application entry point and WPF lifecycle
-├── AssemblyInfo.cs           # Assembly metadata and theme definitions
-├── MainWindow.xaml           # XAML layout: custom titlebar, tabs, AI drawer, modal settings
-├── MainWindow.xaml.cs        # Win32 hooks, WebView2 integration, hotkeys, state management
-├── WebViewDropForwarder.cs   # Drag-and-drop event forwarder for WebView2
-├── MyOverlayPOC.csproj       # Project build specification (.NET 8.0 Windows WPF)
-├── MyOverlayPOC.sln          # Visual Studio solution file
-├── LICENSE                   # GNU General Public License v3.0
-├── README.md                 # Project documentation
-├── .gitignore                # Git ignore rules for .NET / Visual Studio
-└── Assets / Resources
-    ├── app.ico               # Application executable icon
-    ├── logo.png              # High-resolution Oasyss Flux logo
-    ├── intro.mp4             # Startup cinematic intro video
-    ├── plus.png              # Add tab icon
-    ├── refresh.png           # Reload icon
-    ├── settings.png          # Settings icon
-    ├── screenshots.png       # Screenshot tool icon
-    ├── sound.png / muted.png # Audio status icons
-    ├── minimize.png / x.png  # Window control icons
-    └── loading.png           # Spinner asset
+├── Oasyss Flux.exe           # Direct 1-click standalone executable (zero setup)
+├── AiChatService.cs          # Multi-model AI brain (Gemini, ChatGPT, Groq)
+├── MainWindow.xaml / .cs     # Win32 ghost hooks, WebView2 tabs, opacity slider
+├── App.xaml / App.xaml.cs    # App lifecycle
+├── AssemblyInfo.cs           # Meta config
+├── WebViewDropForwarder.cs   # Tab drag-and-drop forwarder
+├── MyOverlayPOC.csproj       # .NET 8 build file
+├── MyOverlayPOC.sln          # VS Solution
+├── README.md                 # Yeh mast raw documentation
+├── LICENSE                   # GPL-3.0
+└── Assets / Resources        # Icons, sounds, intro video
 ```
-
----
-
-## 🔒 Privacy & Local Storage
-
-Oasyss Flux values user privacy:
-- Your API keys are saved locally on your machine in:
-  `%LocalAppData%\MyOverlayPOC\settings.json`
-- Tab restore data and bookmarks are persisted locally in:
-  `%LocalAppData%\MyOverlayPOC\bookmarks.json`
-  `%LocalAppData%\MyOverlayPOC\tabs.json`
-- No tracking or telemetry data is sent to external servers.
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ---
 
@@ -224,5 +150,7 @@ Distributed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENS
 ---
 
 <div align="center">
-Made with ❤️ for gamers, creators, and developers who need an unobtrusive workspace.
+
+**Built for the back-row squad jo last night me syllabus cover karte hai. Topper lu side aipondi, mana batch ki idi ramp. Zero cap, pure jugaad.**
+
 </div>
