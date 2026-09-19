@@ -1,0 +1,30 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+publish-single/
+
+## Visual Studio cache & user files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.ide/
+
+## Large binaries
+*.exe
+*.dll
+*.pdb
+
+## OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## Local user settings / test data
+*.local
