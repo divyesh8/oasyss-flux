@@ -4,121 +4,123 @@
 
 ![Oasyss Flux Logo](logo.png)
 
-### **The Stealth Overlay & AI Weapon for the Back-Row Squad**
-*Screen-share bypass. Zero alt-tab risk. Instant AI clutch. No cap.*
+### **The Stealth Overlay & AI Companion for Online Interviews & Coding Exams**
+*Bypass screen sharing. Zero tab-switch alerts. Instant AI syntax & code clutch.*
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-blue.svg)](https://microsoft.com/windows)
-[![Stealth](https://img.shields.io/badge/Ghost%20Mode-WDA__EXCLUDEFROMCAPTURE-red.svg)](#-ghost-mode--anti-screen-share-stealth)
-[![Setup](https://img.shields.io/badge/Setup-Zero%20Braincells%20(Just%20Double--Click)-brightgreen.svg)](#-quick-run-for-the-aalsi-batch)
-[![Vibe](https://img.shields.io/badge/Target-Last--Night%20Syllabus%20Warriors-orange.svg)](#-disclaimer-topper-gang-dur-raho)
+[![Stealth](https://img.shields.io/badge/Ghost%20Mode-WDA__EXCLUDEFROMCAPTURE-red.svg)](#-ghost-mode--screen-share-invisibility)
+[![Setup](https://img.shields.io/badge/Setup-Instant%201--Click%20.exe-brightgreen.svg)](#-quick-start-zero-setup-needed)
+[![Target](https://img.shields.io/badge/For-Coding%20Rounds%20%26%20Live%20Interviews-orange.svg)](#-disclaimer-not-for-the-textbook-purists)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
 </div>
 
 ---
 
-## 🚫 DISCLAIMER: TOPPER GANG DUR RAHO
+## ⚠️ DISCLAIMER: NOT FOR THE TEXTBOOK PURISTS
 
 > [!WARNING]
-> **Agar tum front bench pe baith ke 4-color pen se notes banate ho, assignment deadline se 3 din pehle submit karte ho, aur 98% attendance ke liye rote ho... bhai repo band karke library jao. This is NOT for you.**
+> **If you're the textbook purist who memorizes 500 LeetCode problems line-by-line and believes in suffering through 45-minute silent panics... close this tab, this repo is not for you.**
 >
-> This weapon is strictly crafted for the last-minute crammers, late-night clutch gods, gamers hiding behind zoom calls, and backbenchers who survive every semester on pure jugaad. 
-> 
-> *Mana batch ki idhe ultimate cheat code. Full stealth, zero scene.*
+> This tool is engineered for candidates, developers, and students facing high-stakes online coding tests, technical assessments, and live virtual interviews. When you're stuck on a tricky syntax bug, forgotten API method, or nasty edge case—Oasyss Flux is your invisible safety net. *Smart work over blind stress, full jugaad.*
 
 ---
 
-## 👁️ What is this Scene? (Overview)
+## 🎯 The Problem It Solves
 
-Oasyss Flux is a frameless, transparent stealth overlay browser + multi-model AI assistant designed for Windows. It hovers silently on top of any game, lab software, proctor window, or full-screen app. It leaves zero traces on the Windows taskbar, doesn't mess with your active window focus, and vanishes in a split second whenever you need it to.
+Modern online technical hiring and proctored coding assessments have ruthless monitoring:
+1. **Screen Sharing is Enforced**: Interviewers on Zoom, Google Meet, or Microsoft Teams watch your entire desktop.
+2. **Tab-Switch Trackers**: Platforms like HackerRank, Mercer Mettl, Codility, and test portals track when you leave the window or press Alt+Tab, flagging you for "suspicious activity".
 
-Whether you're stuck in a boring lecture, writing an assignment at 3 AM, or grinding ranked games while keeping walkthroughs & chats open—yeh browser quietly floats without getting in your way.
+### How Oasyss Flux Solves This:
+- **Invisible to Screen Share**: Uses native Windows API (`WDA_EXCLUDEFROMCAPTURE`). The interviewer sees only your clean IDE or coding portal. Oasyss Flux simply does not exist on their screen feed or in screen recordings.
+- **Zero Tab Switching**: The browser and AI drawer float directly *over* your test window. You never Alt+Tab away, meaning test proctoring scripts never detect any focus loss or tab switches.
+- **Instant AI Debugging**: Need a quick regex pattern, algorithmic hint, or time-complexity sanity check? Slide out the AI drawer, get the answer, and close it in seconds.
 
 ---
 
-## 🔥 Savage Features
+## 🔥 Key Features
 
-### 👻 Ghost Mode / Anti-Screen-Share Stealth
-- **Zoom / Discord / Teams / OBS me full gayab**: Uses Windows native `WDA_EXCLUDEFROMCAPTURE` display affinity.
-- Jab tum screen share kar rahe ho ya lab proctor screen monitor kar raha hai—**unko sirf tumhara clean desktop ya code editor dikhega**. Tumhara floating browser screen capture me record hi nahi hoga.
-- Screen recording lo dikhega hi nahi bro, full invisible scene.
+### 👻 Ghost Mode (Screen-Share Invisibility)
+- Uses Windows low-level display affinity (`WDA_EXCLUDEFROMCAPTURE`).
+- Works across **Zoom, Google Meet, Microsoft Teams, Discord, OBS, and desktop screen recorders**.
+- Screen share me window bilkul gayab—the person viewing your screen only sees your IDE and coding platform underneath.
 
-### 🤖 Built-In AI Sidekick Drawer (Gemini + ChatGPT + Groq)
-- Assignment ka question samajh nahi aa raha? Exam code fat raha hai?
-- Alt-tab karke search karne ka risk mat lo. Side drawer kholo, prompt daalo, answer lo, drawer close karo.
-- Hot-switch between **Google Gemini**, **OpenAI ChatGPT**, and lightning-fast **Groq** (Llama 3.1 70B). Sab setting ek jagah.
+### 🤖 Integrated Multi-Model AI Drawer
+- Built-in slide-out AI assistant drawer powered by your own API keys:
+  - **Google Gemini**: Fast, intelligent reasoning (`gemini-3.6-flash`, `gemini-1.5-flash`).
+  - **OpenAI ChatGPT**: Industry-standard code explanations (`gpt-4o`, `gpt-4o-mini`).
+  - **Groq Cloud**: Lightning-speed inference with `llama-3.1-70b` for instant code responses without waiting.
+- Ask questions, check edge cases, or look up syntax without leaving your coding window.
 
 ### ⚡ Panic Key (`Shift + Alt + Z`)
-- Professor, invigilator, ya parents room me enter hue? 
-- One instant tap on <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> and the whole window vanishes instantly into the void.
+- If you need the overlay gone in a split second, press <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd>.
+- The entire window instantly vanishes from your sight. Press it again to bring it right back.
 
-### 🪟 Transparency / See-Through Mode
-- Full screen game ya IDE chal raha hai? Slider kheecho aur opacity low kardo.
-- You can literally read docs, cheat sheets, or anime subtitles *through* the browser while looking at your game or code behind it.
+### 🪟 Transparency & See-Through Mode
+- Floating opacity slider allows you to make the browser window semi-transparent.
+- Read documentation, code samples, or AI responses *directly through* the browser while keeping your eyes on your active coding editor.
 
-### 🔇 1-Tap Sannata (Global Audio Mute)
-- Random web page pe annoying video ya loud ad bajne laga?
-- Ek click pe poore browser ka audio silent. Zero panic, zero awkwardness in class.
+### 🔇 1-Click Audio Silence (Global Mute)
+- Instant mute button to kill all audio across all tabs. No surprise sound leaks during live rounds.
 
-### 📸 Screenshot Vault & Favicon Bookmarks
-- Slides or questions ka instant screenshot maaro, dock tray me thumbnails collect honge for quick reference.
-- Important resources ek click pe bookmarks bar me save ho jaate hain with auto-fetched site logos.
+### 📸 Problem Statement Snapshot Tray
+- Grab quick snapshots of complex question diagrams, constraints, or input/output formats with the built-in screenshot tool. Saved directly to a dock tray for easy reference.
 
 ---
 
-## ⚡ Quick Run for the Aalsi Batch
+## 🚀 Quick Start (Zero Setup Needed)
 
-Humko pata hai .NET SDK install karna, environment path set karna, aur build commands run karna bohot bada headache hai. Isliye directly ready-to-use executable bana ke yahi repo me daal diya hai.
+Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. That's why a pre-compiled standalone executable is included directly in this repository.
 
 ### Just Run:
-1. Repo download ya clone karo.
-2. Folder me **`Oasyss Flux.exe`** dikhega.
-3. Uspe **Double-Click** maaro.
-4. Khel khatam! App instantly chalega.
+1. Download or clone this repository.
+2. Open the folder and double-click **`Oasyss Flux.exe`**.
+3. *Bas, khel khatam!* The overlay launches immediately.
 
 > [!TIP]
-> **No installation wizard. No .NET SDK needed.** 
-> The included `Oasyss Flux.exe` is completely self-contained (~79 MB). Sab kuch andar bundled hai, plug-and-play scene.
+> **No installation wizard. No .NET SDK required.** 
+> `Oasyss Flux.exe` is completely self-contained (~79 MB) with the runtime and native libraries bundled inside.
 
 ---
 
-## ⌨️ Shortcuts (Ratta Maar Lo)
+## ⌨️ Essential Keyboard Shortcuts
 
-| Keybind | Scene / Action |
+| Shortcut | Action |
 |---|---|
-| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> | **Panic Button**: Instant Hide / Reveal Overlay |
-| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Naya Tab Kholo |
-| <kbd>Ctrl</kbd> + <kbd>W</kbd> | Current Tab Band Karo |
-| <kbd>Ctrl</kbd> + <kbd>R</kbd> / <kbd>F5</kbd> | Page Refresh |
-| <kbd>Esc</kbd> | Open Popups / Slide Menus Dismiss Karo |
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> | **Panic Toggle**: Instant Show / Hide Overlay |
+| <kbd>Ctrl</kbd> + <kbd>T</kbd> | Open New Browser Tab |
+| <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Active Tab |
+| <kbd>Ctrl</kbd> + <kbd>R</kbd> / <kbd>F5</kbd> | Refresh Web Page |
+| <kbd>Esc</kbd> | Dismiss AI Drawer / Settings Modal |
 
 ---
 
-## 🔑 AI Key Setup (Free Me Kaha Se Milega?)
+## 🔑 AI Key Setup (Free Keys)
 
-1. Top bar pe **Settings** (⚙️) icon dabaao.
-2. **AI Configuration** me jao.
-3. Free API keys yaha se uthaao:
-   - **Google Gemini**: [Google AI Studio](https://aistudio.google.com/apikey) *(Free tier best hai, unlimited questions)*
-   - **Groq Cloud**: [Groq Console](https://console.groq.com/keys) *(Instant ultra-fast Llama 3 answers)*
-   - **OpenAI**: [OpenAI Platform](https://platform.openai.com/api-keys)
-4. Key paste karo aur Save maaro. Drawer kholo aur AI se kaam karwao.
+1. Click the **Settings** (⚙️) gear icon on the top title bar.
+2. Navigate to the **AI Configuration** tab.
+3. Add your free API key:
+   - **Google Gemini**: Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey) *(Recommended: generous free tier)*.
+   - **Groq Cloud**: Get a free ultra-fast key at [Groq Console](https://console.groq.com/keys) *(Fastest responses for live coding)*.
+   - **OpenAI**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys).
+4. Save settings and open the AI drawer whenever you need a quick code lookup.
 
 ---
 
-## 🛠️ For The Curious Nerds (Build From Source)
+## 🛠️ For Developers (Build from Source)
 
-Agar tumko khud code modify karke build karna hai:
+If you wish to modify the code or inspect the implementation:
 
 ```powershell
-# Restore & Build
+# Prerequisites: .NET 8.0 SDK installed
 dotnet restore
 dotnet build -c Release
 
-# Run
+# Run in Release mode
 dotnet run -c Release
 
-# Ekdum standalone single-file exe compile karne ke liye:
+# To compile the exact standalone compressed single-file executable:
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:AssemblyName="Oasyss Flux" -o ./publish
 ```
 
@@ -128,17 +130,17 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 ```
 oasyss-flux/
-├── Oasyss Flux.exe           # Direct 1-click standalone executable (zero setup)
-├── AiChatService.cs          # Multi-model AI brain (Gemini, ChatGPT, Groq)
-├── MainWindow.xaml / .cs     # Win32 ghost hooks, WebView2 tabs, opacity slider
-├── App.xaml / App.xaml.cs    # App lifecycle
-├── AssemblyInfo.cs           # Meta config
+├── Oasyss Flux.exe           # Standalone pre-built executable (zero setup)
+├── AiChatService.cs          # Multi-provider AI brain (Gemini, ChatGPT, Groq)
+├── MainWindow.xaml / .cs     # Win32 ghost hooks, WebView2 tabs, opacity controls
+├── App.xaml / App.xaml.cs    # Application entry point & lifecycle
+├── AssemblyInfo.cs           # Assembly metadata
 ├── WebViewDropForwarder.cs   # Tab drag-and-drop forwarder
-├── MyOverlayPOC.csproj       # .NET 8 build file
-├── MyOverlayPOC.sln          # VS Solution
-├── README.md                 # Yeh mast raw documentation
-├── LICENSE                   # GPL-3.0
-└── Assets / Resources        # Icons, sounds, intro video
+├── MyOverlayPOC.csproj       # .NET 8 WPF project file
+├── MyOverlayPOC.sln          # Solution file
+├── README.md                 # Complete documentation
+├── LICENSE                   # GPL-3.0 License
+└── Assets / Resources        # App icons, audio indicators, intro media
 ```
 
 ---
@@ -151,6 +153,6 @@ Distributed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENS
 
 <div align="center">
 
-**Built for the back-row squad jo last night me syllabus cover karte hai. Topper lu side aipondi, mana batch ki idi ramp. Zero cap, pure jugaad.**
+**Built for candidates and coders who believe in smart work over panic. Interview clear karo, tension mat lo. Zero scene, pure clutch.**
 
 </div>
