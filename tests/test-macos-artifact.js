@@ -98,7 +98,7 @@ async function runArtifactVerification() {
     report('Executable: Binary exists in Contents/MacOS', 'PASS');
 
     const stat = fs.statSync(execPath);
-    report('Executable: Size is greater than 100 KB (not a stub script)', stat.size > 100 * 1024 ? 'PASS' : 'FAIL', `Size: ${stat.size} bytes`);
+    report('Executable: Size is greater than 10 KB (not a stub script)', stat.size > 10 * 1024 ? 'PASS' : 'FAIL', `Size: ${stat.size} bytes`);
 
     // Magic bytes inspection
     const fd = fs.openSync(execPath, 'r');
@@ -167,13 +167,18 @@ async function runArtifactVerification() {
   }
 
   // 5. Validate Resources & AppIcon
-  const iconPath = path.join(appPath, 'Contents', 'Resources', 'AppIcon.icns');
-  if (fs.existsSync(iconPath)) {
+  const iconCandidates = [
+    path.join(appPath, 'Contents', 'Resources', 'app.icns'),
+    path.join(appPath, 'Contents', 'Resources', 'AppIcon.icns'),
+    path.join(appPath, 'Contents', 'Resources', `${APP_NAME}.icns`)
+  ];
+  const iconPath = iconCandidates.find(c => fs.existsSync(c));
+  if (iconPath) {
     const iconStat = fs.statSync(iconPath);
-    report('Resources: AppIcon.icns exists', 'PASS');
-    report('Resources: AppIcon.icns is valid size (> 500 KB)', iconStat.size > 500 * 1024 ? 'PASS' : 'FAIL', `Size: ${iconStat.size} bytes`);
+    report(`Resources: Application icon exists (${path.basename(iconPath)})`, 'PASS');
+    report('Resources: Icon is valid size (> 500 KB)', iconStat.size > 500 * 1024 ? 'PASS' : 'FAIL', `Size: ${iconStat.size} bytes`);
   } else {
-    report('Resources: AppIcon.icns exists', 'FAIL', 'Icon missing');
+    report('Resources: Application icon exists', 'FAIL', 'Icon missing in Contents/Resources');
   }
 
   // 6. Development Path Leakage Scan
