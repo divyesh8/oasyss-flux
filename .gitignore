@@ -20,8 +20,9 @@ publish-pure-single/
 *.dll
 *.pdb
 
-# Allow the pre-built standalone executable
-!Oasyss Flux.exe
+# Allow the pre-built standalone executable in Release/
+!Release/Oasyss Flux.exe
+/Oasyss Flux.exe
 
 ## OS generated files
 Thumbs.db

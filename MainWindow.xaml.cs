@@ -254,6 +254,7 @@ public class UsageData
 private readonly Dictionary<string, HashSet<CoreWebView2PermissionKind>> _grantedPermissions = new Dictionary<string, HashSet<CoreWebView2PermissionKind>>();
         private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 private System.Windows.Point _dragStartPoint;
@@ -354,6 +355,11 @@ private bool _minimizeOnFocusLoss = true;
         private System.Windows.Controls.Button? _transparencyToggleButton;
         private Slider? _transparencySlider;
         private Border? _transparencySliderPopup;
+
+        // Complete Transparency (Ghost Mode)
+        private bool _isCompletelyTransparent = false;
+        private double _savedOpacityBeforeCompleteTransparency = 1.0;
+        private DateTime _lastShiftTPressTime = DateTime.MinValue;
 
         // Startup Intro Video
         private Grid? _introOverlay;
@@ -807,6 +813,19 @@ private async void UsageTrackTimer_Tick(object? sender, EventArgs e)
             {
                 _transparencySlider.Value = _transparencyLevel;
                 _transparencySlider.ValueChanged += TransparencySlider_ValueChanged;
+            }
+
+            var ghostButton = template.FindName("GhostModeButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (ghostButton != null)
+            {
+                ghostButton.Click += (s, e) =>
+                {
+                    if (_transparencySliderPopup != null)
+                    {
+                        _transparencySliderPopup.Visibility = Visibility.Collapsed;
+                    }
+                    ToggleCompleteTransparency();
+                };
             }
 
             // ── Build AI Chat Panel dynamically and inject into Row 3 grid ──
@@ -1348,6 +1367,14 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     contentGrid.Children.Add(transparencyHotkeyLabel);
     contentGrid.Children.Add(transparencyHotkeyValue);
 
+    contentGrid.RowDefinitions.Insert(15, new RowDefinition { Height = GridLength.Auto });
+    var ghostHotkeyLabel = new System.Windows.Controls.Label { Content = "Complete Transparency:", Style = (Style)FindResource("DialogLabelStyle") };
+    var ghostHotkeyValue = new TextBlock { Text = "Shift + T / Shift + Alt + T", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    Grid.SetRow(ghostHotkeyLabel, 15); Grid.SetColumn(ghostHotkeyLabel, 0);
+    Grid.SetRow(ghostHotkeyValue, 15); Grid.SetColumn(ghostHotkeyValue, 1);
+    contentGrid.Children.Add(ghostHotkeyLabel);
+    contentGrid.Children.Add(ghostHotkeyValue);
+
     var closeButton = new System.Windows.Controls.Button { Content = "✕", Style = (Style)FindResource("DialogCloseButtonStyle"), HorizontalAlignment = System.Windows.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -20, -20, 0), IsCancel = true };
     closeButton.Click += (s, e) => dialog.Close();
     parentGrid.Children.Add(contentGrid);
@@ -1806,8 +1833,48 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
         #region Transparency Toggle
 
+        public void ToggleCompleteTransparency()
+        {
+            _isCompletelyTransparent = !_isCompletelyTransparent;
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+
+            if (_isCompletelyTransparent)
+            {
+                _savedOpacityBeforeCompleteTransparency = this.Opacity > 0.04 ? this.Opacity : 1.0;
+                this.Opacity = 0.0;
+                this.IsHitTestVisible = false;
+
+                if (hwnd != IntPtr.Zero)
+                {
+                    long extendedStyle = GetWindowLongPtrSafe(hwnd, GWL_EXSTYLE);
+                    SetWindowLongPtrSafe(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+                }
+            }
+            else
+            {
+                if (hwnd != IntPtr.Zero)
+                {
+                    long extendedStyle = GetWindowLongPtrSafe(hwnd, GWL_EXSTYLE);
+                    SetWindowLongPtrSafe(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
+                }
+
+                this.IsHitTestVisible = true;
+                this.Opacity = _savedOpacityBeforeCompleteTransparency > 0.04 ? _savedOpacityBeforeCompleteTransparency : 1.0;
+                _overlayOpacity = this.Opacity;
+                this.Activate();
+            }
+
+            UpdateTransparencyButtonUI();
+        }
+
         private void ToggleTransparencyMode()
         {
+            if (_isCompletelyTransparent)
+            {
+                ToggleCompleteTransparency();
+                return;
+            }
+
             _isTransparentMode = !_isTransparentMode;
             if (_isTransparentMode)
             {
@@ -1824,7 +1891,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
         private void TransparencySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             _transparencyLevel = e.NewValue;
-            if (_isTransparentMode)
+            if (_isTransparentMode && !_isCompletelyTransparent)
             {
                 ApplyOverlayOpacity(_transparencyLevel);
             }
@@ -1847,11 +1914,13 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
                 var img = _transparencyToggleButton.Content as System.Windows.Controls.Image;
                 if (img != null)
                 {
-                    img.Opacity = _isTransparentMode ? 0.5 : 1.0;
+                    img.Opacity = _isCompletelyTransparent ? 0.2 : (_isTransparentMode ? 0.5 : 1.0);
                 }
-                _transparencyToggleButton.ToolTip = _isTransparentMode
-                    ? $"Transparency ON ({(int)(_transparencyLevel * 100)}%) — Shift+Alt+T"
-                    : "Transparency OFF — Shift+Alt+T";
+                _transparencyToggleButton.ToolTip = _isCompletelyTransparent
+                    ? "Ghost Mode (Completely Transparent) — Shift+T / Shift+Alt+T to restore"
+                    : (_isTransparentMode
+                        ? $"Transparency ON ({(int)(_transparencyLevel * 100)}%) — Shift+Alt+T"
+                        : "Transparency OFF — Shift+Alt+T (Complete: Shift+T)");
             }
         }
 
@@ -2435,7 +2504,7 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         }
         else if (actionKey == Key.T)
         {
-            Dispatcher.Invoke(ToggleTransparencyMode);
+            Dispatcher.Invoke(ToggleCompleteTransparency);
             handled = true;
         }
         // Resize: Shift+Alt+Up = bigger, Shift+Alt+Down = smaller
@@ -2452,6 +2521,31 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         else if (actionKey == Key.LeftAlt || actionKey == Key.RightAlt)
         {
             handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.T)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused);
+
+        if (this.IsActive && !isEditingText)
+        {
+            Dispatcher.Invoke(ToggleCompleteTransparency);
+            handled = true;
+        }
+        else
+        {
+            var now = DateTime.UtcNow;
+            if ((now - _lastShiftTPressTime).TotalMilliseconds <= 450)
+            {
+                Dispatcher.Invoke(ToggleCompleteTransparency);
+                handled = true;
+                _lastShiftTPressTime = DateTime.MinValue;
+            }
+            else
+            {
+                _lastShiftTPressTime = now;
+            }
         }
     }
 

@@ -57,9 +57,11 @@ Modern online technical hiring and proctored coding assessments have ruthless mo
 - If you need the overlay gone in a split second, press <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd>.
 - The entire window instantly vanishes from your sight. Press it again to bring it right back.
 
-### 🪟 Transparency & See-Through Mode
-- Floating opacity slider allows you to make the browser window semi-transparent.
-- Read documentation, code samples, or AI responses *directly through* the browser while keeping your eyes on your active coding editor.
+### 🪟 Complete Transparency & Ghost Mode (`Shift + T` / `Shift + Alt + T`)
+- Instantly make the entire overlay **100% transparent (invisible) and click-through**.
+- All mouse clicks pass directly through to your IDE or coding test underneath as if the overlay is not even there.
+- Press <kbd>Shift</kbd> + <kbd>T</kbd> (or <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>) again to instantly restore opacity and interaction.
+- Also includes a floating opacity slider for customizable semi-transparent reading.
 
 ### 🔇 1-Click Audio Silence (Global Mute)
 - Instant mute button to kill all audio across all tabs. No surprise sound leaks during live rounds.
@@ -94,7 +96,11 @@ When you publish this repo to GitHub, you can also attach `Oasyss Flux.exe` to a
 
 | Shortcut | Action |
 |---|---|
+| <kbd>Shift</kbd> + <kbd>T</kbd> / <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd> | **Complete Transparency**: 100% Invisible & Click-Through Toggle |
 | <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd> | **Panic Toggle**: Instant Show / Hide Overlay |
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>C</kbd> | Minimize / Restore Overlay to Micro-Dock |
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd>/<kbd>A</kbd>/<kbd>S</kbd>/<kbd>D</kbd> | Move Overlay Window Position |
+| <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Up</kbd>/<kbd>Down</kbd> | Resize Overlay Window Size |
 | <kbd>Ctrl</kbd> + <kbd>T</kbd> | Open New Browser Tab |
 | <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Active Tab |
 | <kbd>Ctrl</kbd> + <kbd>R</kbd> / <kbd>F5</kbd> | Refresh Web Page |
