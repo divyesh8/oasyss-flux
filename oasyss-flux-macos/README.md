@@ -4,7 +4,7 @@
 
 ### **The Stealth Overlay & AI Companion for Online Assessments (macOS Universal 2)**
 *Apple Silicon (M1/M2/M3/M4) + Intel (x86_64)*
-*Bypass screen sharing via `NSWindowSharingNone`. Zero tab-switch alerts. Instant AI syntax & code clutch.*
+*Display capture exclusion via `NSWindowSharingNone`. Zero tab-switch alerts. Instant AI syntax & code clutch.*
 
 </div>
 
@@ -19,23 +19,27 @@
 
 ---
 
-## 🛠️ macOS Setup & Installation (3 Steps)
+## 🛠️ macOS Setup & Installation
 
 1. **Mount & Install**:
    - Double-click `Oasyss Flux — macOS Universal.dmg`.
    - Drag **`Oasyss Flux.app`** into your **`/Applications`** folder.
 
-2. **First Launch (Gatekeeper Quarantine Bypass)**:
-   - For open-source development builds, macOS Gatekeeper may show a warning dialog.
-   - **Terminal Fix (Recommended)**:
-     ```bash
-     xattr -cr "/Applications/Oasyss Flux.app"
-     ```
-   - **Or via Finder**: Right-click (or Control-click) `Oasyss Flux.app` in `/Applications`, choose **Open**, and click **Open** in the prompt.
+2. **Official Security & Gatekeeper Verification**:
+   - Production releases are signed with an Apple Developer ID certificate and notarized by Apple.
+   - For local unsigned development builds, macOS Gatekeeper verifies the application package via standard system dialogs. Open via Finder (`Control-click` → `Open`).
 
 3. **Permissions**:
-   - **Screen Recording**: `System Settings → Privacy & Security → Screen Recording` (allows window-level capture exclusion verification).
-   - **Accessibility**: `System Settings → Privacy & Security → Accessibility` (optional, for global hotkeys).
+   - **Screen Recording**: `System Settings → Privacy & Security → Screen Recording` (allows window-level capture exclusion verification against the display compositor).
+   - **Accessibility**: `System Settings → Privacy & Security → Accessibility` (optional, for global hotkeys outside window focus).
+
+---
+
+## 🛡️ Security, Privacy & Network Boundaries
+
+- **Display Protection**: Attempts to exclude this window from supported screen capture mechanisms (such as Zoom, Teams, Meet, and QuickTime) by setting `NSWindowSharingNone` on the Quartz window server. *Note: Does not protect against external hardware capture devices or unsupported compositors.*
+- **Credential Protection**: All AI API keys are stored exclusively in the macOS Keychain (`com.divyesh.oasyssflux`) via Apple's `Security.framework`. Keys are transferred via `stdin` streams, never written to disk unencrypted, and never exposed to the UI renderer process.
+- **External Network Boundary**: When AI queries are initiated, the application communicates directly over TLS 1.3 with upstream vendor APIs (Google Gemini, OpenAI, Groq). No telemetry, analytics, or session keystrokes are sent to any third-party server.
 
 ---
 
@@ -58,22 +62,24 @@
 
 1. Open **Settings** (<kbd>⌘ Cmd</kbd> + <kbd>,</kbd>).
 2. Go to **AI Configuration**.
-3. Add your free API key:
+3. Add your API key:
    - **Google Gemini**: [Google AI Studio](https://aistudio.google.com/apikey)
    - **Groq Cloud**: [Groq Console](https://console.groq.com/keys)
    - **OpenAI**: [OpenAI Platform](https://platform.openai.com/api-keys)
-4. Click Save. Keys are encrypted via macOS Keychain (`Security.framework`).
+4. Click Save. Keys are encrypted directly into the macOS Keychain (`Security.framework`).
 
 ---
 
-## 🛠️ Build from Source (macOS)
+## 🛠️ Build & Validate from Source (macOS)
 
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Run automated test suites
+# 2. Run automated security scan and test suites
+node scripts/scan-security.js
 npm test
+node tests/test-security-negative.js
 npm run test:static
 
 # 3. Compile native Swift helpers (Universal ARM64 + x86_64)

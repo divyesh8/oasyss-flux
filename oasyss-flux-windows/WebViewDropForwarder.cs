@@ -9,7 +9,6 @@ using Microsoft.Web.WebView2.Wpf;
 
 namespace MyOverlayPOC
 {
-
     internal static class WebViewDropForwarder
     {
         public static void Attach(WebView2CompositionControl webView)
@@ -98,6 +97,11 @@ namespace MyOverlayPOC
             string base64 = Convert.ToBase64String(bytes);
             string name = Path.GetFileName(filePath);
 
+            // SECURITY FIX: Never use unsafe string interpolation with user-controlled filenames.
+            // JsonSerializer.Serialize guarantees strict JSON-escaping for quotes, newlines, and metacharacters.
+            string jsonBase64 = JsonSerializer.Serialize(base64);
+            string jsonName = JsonSerializer.Serialize(name);
+
             string script = $@"
 (function(b64, name, x, y) {{
     try {{
@@ -123,7 +127,7 @@ namespace MyOverlayPOC
         target.dispatchEvent(new DragEvent('dragover',  opts));
         target.dispatchEvent(new DragEvent('drop',      opts));
     }} catch (err) {{ console.error('screenshot drop fallback failed:', err); }}
-}})('{base64}', '{name}', {x}, {y});";
+}})({jsonBase64}, {jsonName}, {x}, {y});";
 
             await webView.CoreWebView2.ExecuteScriptAsync(script);
         }

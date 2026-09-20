@@ -236,15 +236,7 @@ public class AppSettings
         }
     }
 
-public class UsageData
-{
-    public bool UserInteracted { get; set; }
-    public bool WasNotMinimized { get; set; }
-    public double FocusTimeSeconds { get; set; }
-    public double TotalActiveTimeSeconds { get; set; }
-    public bool UrlChangedInAddressBar { get; set; }
-    public int NewTabsOpened { get; set; }
-}
+
 
     public partial class MainWindow : Window
     {
@@ -337,18 +329,7 @@ private readonly HashSet<uint> _swallowedKeys = new HashSet<uint>();
             _saveSettingsDebounceTimer.Start();
         }
         private uint _hotkeyModifiers = MOD_SHIFT | MOD_ALT;
-private uint _hotkeyKey = 0x5A; // Z key
-        private readonly HttpClient _usageTrackerHttpClient;
-        private DispatcherTimer _usageTrackTimer;
-        private int _usageTrackerPort;
-        
-        private bool _userInteractedInInterval = false;
-        private bool _wasMinimizedInInterval = false;
-        private DateTime _lastFocusTime;
-        private TimeSpan _totalFocusTimeInInterval;
-        private bool _isWindowFocused = false;
-            private bool _urlChangedInInterval = false;
-    private int _newTabsOpenedInInterval = 0;
+        private uint _hotkeyKey = 0x5A; // Z key
 
         private readonly string _tabsFilePath;
         private bool _restoreTabsOnStartup = false;
@@ -445,9 +426,7 @@ private bool _minimizeOnFocusLoss = true;
 
         public MainWindow()
         {
-            try { File.AppendAllText("startup.log", $"[{DateTime.Now}] MainWindow constructor started\n"); } catch {}
             InitializeComponent();
-            try { File.AppendAllText("startup.log", $"[{DateTime.Now}] InitializeComponent finished\n"); } catch {}
 
             var originalContent = this.Content as UIElement;
             var newRootGrid = new Grid();
@@ -467,19 +446,7 @@ private bool _minimizeOnFocusLoss = true;
 
             InitializeIntroVideo(newRootGrid);
 
-            _usageTrackerHttpClient = new HttpClient();
-            
-            var args = Environment.GetCommandLineArgs();
-            var portArg = args.FirstOrDefault(a => a.StartsWith("/port:"));
-            if (portArg != null && int.TryParse(portArg.Substring("/port:".Length), out int port))
-            {
-                _usageTrackerPort = port;
-                InitializeUsageTracker();
-            }
-            else
-            {
-                Debug.WriteLine("WARNING: Usage tracker port not provided via command line arguments. Tracking is disabled.");
-            }
+            // Background usage tracker removed to guarantee zero background telemetry.
 
             Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
 
@@ -524,7 +491,6 @@ private bool _minimizeOnFocusLoss = true;
             }
         }
 
-        #region Usage Tracking
 private void ToggleProgrammaticMinimize()
 {
     if (_isMinimized)
@@ -536,65 +502,7 @@ private void ToggleProgrammaticMinimize()
         MinimizeCustom();
     }
 }
-        private void InitializeUsageTracker()
-        {
-            this.StateChanged += UsageTracker_WindowStateChanged;
-            this.Activated += UsageTracker_WindowActivated;
-            this.Deactivated += UsageTracker_WindowDeactivated;
-            
-            if (this.IsActive)
-            {
-                _isWindowFocused = true;
-                _lastFocusTime = DateTime.UtcNow;
-            }
 
-            _usageTrackTimer = new DispatcherTimer();
-            _usageTrackTimer.Interval = TimeSpan.FromSeconds(60);
-            _usageTrackTimer.Tick += UsageTrackTimer_Tick;
-            _usageTrackTimer.Start();
-            Debug.WriteLine($"Usage tracker initialized for port {_usageTrackerPort}. Timer will tick every 2 minutes.");
-        }
-        
-        private void UsageTracker_WindowStateChanged(object? sender, EventArgs e)
-        {
-            if (this.WindowState == WindowState.Minimized)
-            {
-                _wasMinimizedInInterval = true;
-                if (_isWindowFocused)
-                {
-                        _totalFocusTimeInInterval += DateTime.UtcNow - _lastFocusTime;
-                    _isWindowFocused = false;
-                }
-            }
-            else if (this.IsActive && !_isWindowFocused)
-            {
-                _isWindowFocused = true;
-                _lastFocusTime = DateTime.UtcNow;
-            }
-        }
-
-        private void UsageTracker_WindowActivated(object? sender, EventArgs e)
-        {
-            if (!_isWindowFocused && this.WindowState != WindowState.Minimized)
-            {
-                _isWindowFocused = true;
-                _lastFocusTime = DateTime.UtcNow;
-            }
-        }
-
-private void UsageTracker_WindowDeactivated(object? sender, EventArgs e)
-{
-    if (_isWindowFocused)
-    {
-        _totalFocusTimeInInterval += DateTime.UtcNow - _lastFocusTime;
-        _isWindowFocused = false;
-    }
-
-}
-        private void MarkUserInteraction()
-        {
-            _userInteractedInInterval = true;
-        }
 
         private void TabItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
@@ -721,54 +629,7 @@ private void UsageTracker_WindowDeactivated(object? sender, EventArgs e)
             return null;
         }
 
-private async void UsageTrackTimer_Tick(object? sender, EventArgs e)
-{
-    Debug.WriteLine("Usage track timer ticked. Compiling and sending data.");
-    if (_usageTrackerPort == 0) return;
 
-    if (_isWindowFocused)
-    {
-        _totalFocusTimeInInterval += DateTime.UtcNow - _lastFocusTime;
-        _lastFocusTime = DateTime.UtcNow;
-    }
-
-    var data = new UsageData
-    {
-        UserInteracted = _userInteractedInInterval,
-        WasNotMinimized = !_wasMinimizedInInterval,
-        FocusTimeSeconds = _totalFocusTimeInInterval.TotalSeconds,
-        TotalActiveTimeSeconds = 120,
-        UrlChangedInAddressBar = _urlChangedInInterval, 
-        NewTabsOpened = _newTabsOpenedInInterval
-    };
-    
-    try
-    {
-        string url = $"http://localhost:{_usageTrackerPort}/track";
-
-        string jsonPayload = JsonSerializer.Serialize(data);
-        var httpContent = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
-
-        var response = await _usageTrackerHttpClient.PostAsync(url, httpContent);
-        
-        response.EnsureSuccessStatusCode();
-        Debug.WriteLine("Successfully sent usage data to Python backend.");
-    }
-    catch (Exception ex)
-    {
-        Debug.WriteLine($"Error sending usage data: {ex.Message}");
-    }
-    finally
-    {
-        _userInteractedInInterval = false;
-        _wasMinimizedInInterval = false;
-        _totalFocusTimeInInterval = TimeSpan.Zero;
-        _urlChangedInInterval = false;
-        _newTabsOpenedInInterval = 0;
-    }
-}
-
-        #endregion
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
@@ -2917,7 +2778,6 @@ private bool AreHotkeyModifiersAPotentialMatch()
         }
 private async void AddNewBrowserTab(string url)
         {
-            _newTabsOpenedInInterval++;
             var newTab = new TabItem();
             var headerPanel = new Grid();
             headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -3084,12 +2944,6 @@ private async void AddNewBrowserTab(string url)
             webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
 
-            if (_usageTrackerPort > 0)
-            {
-                webView.CoreWebView2.SourceChanged += (s, args) => MarkUserInteraction();
-                webView.CoreWebView2.NavigationStarting += (s, args) => MarkUserInteraction();
-            }
-
             string cursorScript = @"
                 (function() {
                     'use strict';
@@ -3166,7 +3020,6 @@ private void MainWindow_Deactivated(object? sender, EventArgs e)
             if (e.Key == Key.Enter)
             {
                 _addressBarHasIntendedChanges = true;
-                _urlChangedInInterval = true;
 
                 var webView = GetCurrentWebView();
                 Navigate(_addressBar.Text);

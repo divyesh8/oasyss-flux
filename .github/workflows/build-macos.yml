@@ -8,6 +8,9 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-verify-macos:
     name: Build, Verify & Package (macOS Universal)
@@ -18,10 +21,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node.js (v20)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
         with:
           node-version: 20
           cache: 'npm'
@@ -36,12 +39,18 @@ jobs:
           fi
 
       # ──────────────────────────────────────────────
-      #  Stage 1: Core Subsystem & Static Audit Tests
+      #  Stage 1: Core Subsystem, Static Audit & Negative Security Tests
       # ──────────────────────────────────────────────
+      - name: Run Security Static Analysis
+        run: node scripts/scan-security.js
+
       - name: Run Core Subsystem Tests
         run: node tests/test-core.js
 
-      - name: Run Static Bundle & Security Audit Tests
+      - name: Run Negative Security Tests
+        run: node tests/test-security-negative.js
+
+      - name: Run Static Bundle & Packaging Audit Tests
         run: node tests/test-static-bundle.js
 
       # ──────────────────────────────────────────────
@@ -69,25 +78,45 @@ jobs:
         run: node tests/test-macos-artifact.js "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
 
       # ──────────────────────────────────────────────
-      #  Stage 5: Apple Code Signing (Conditional)
+      #  Stage 5: Apple Code Signing (Bottom-Up)
       # ──────────────────────────────────────────────
       - name: Code Signing (Apple Developer ID)
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
-            echo "Applying Developer ID signature with Hardened Runtime..."
-            codesign --deep --force --verify --verbose \
-              --options runtime \
+            echo "Applying Developer ID signature with Hardened Runtime (bottom-up)..."
+            APP_PATH="dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+
+            # 1. Sign helper binaries in app bundle
+            if [ -d "$APP_PATH/Contents/Resources/app/assets/macos/helpers" ]; then
+              find "$APP_PATH/Contents/Resources/app/assets/macos/helpers" -type f -perm +111 -exec \
+                codesign --force --options runtime --entitlements assets/macos/entitlements.mac.plist --sign "$APPLE_SIGNING_IDENTITY" {} +
+            fi
+
+            # 2. Sign frameworks and dylibs
+            if [ -d "$APP_PATH/Contents/Frameworks" ]; then
+              find "$APP_PATH/Contents/Frameworks" \( -name "*.framework" -o -name "*.dylib" \) | sort -r | while read -r item; do
+                codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$item"
+              done
+
+              # 3. Sign Helper apps
+              find "$APP_PATH/Contents/Frameworks" -name "*.app" | while read -r item; do
+                codesign --force --options runtime --entitlements assets/macos/entitlements.mac.plist --sign "$APPLE_SIGNING_IDENTITY" "$item"
+              done
+            fi
+
+            # 4. Sign main app bundle
+            codesign --force --options runtime \
               --entitlements assets/macos/entitlements.mac.plist \
               --sign "$APPLE_SIGNING_IDENTITY" \
-              "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+              "$APP_PATH"
 
             echo "Verifying signature integrity..."
-            codesign --verify --deep --strict --verbose=2 "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+            codesign --verify --deep --strict --verbose=2 "$APP_PATH"
             echo "✓ Code signing verified."
           else
-            echo "ℹ️ SIGNING: NOT CONFIGURED (No Apple Developer ID configured in secrets). Continuing as Unsigned Validation Build."
+            echo "ℹ️ SIGNING STATUS: BLOCKED (Apple Developer ID not configured in repository secrets). Artifact produced is an Unsigned Test Build."
           fi
 
       # ──────────────────────────────────────────────
@@ -114,7 +143,7 @@ jobs:
             spctl --assess --type open --context context:primary-signature --verbose "dist/Oasyss Flux — macOS Universal.dmg"
             echo "✓ Notarization validated."
           else
-            echo "ℹ️ NOTARIZATION: NOT CONFIGURED. Artifact is ready for testing / unsigned distribution."
+            echo "ℹ️ NOTARIZATION STATUS: BLOCKED (Apple Developer / Notary credentials not configured in repository secrets)."
           fi
 
       # ──────────────────────────────────────────────
@@ -132,12 +161,13 @@ jobs:
           echo "=== Generated Checksums ==="
           cat SHA256SUMS.txt
 
-      - name: Upload DMG, ZIP & Checksum Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload DMG, ZIP, SBOM & Checksum Artifacts
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
         with:
           name: oasyss-flux-macos-universal-release
           path: |
             oasyss-flux-macos/dist/*.dmg
             oasyss-flux-macos/dist/*.zip
             oasyss-flux-macos/dist/SHA256SUMS.txt
+            oasyss-flux-macos/dist/sbom.json
           retention-days: 14

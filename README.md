@@ -97,13 +97,11 @@ Universal 2 binary for **Apple Silicon (M1/M2/M3/M4)** and **Intel (x86_64)**:
 | **`Oasyss Flux — macOS Universal.dmg`** | Universal 2 (`arm64` + `x86_64`) | [**Download via GitHub Actions Artifacts**](https://github.com/divyesh8/oasyss-flux/actions/runs/35506874748/artifacts/10604406146) |
 | **`Oasyss Flux — macOS Universal.zip`** | Universal 2 (`arm64` + `x86_64`) | [**Download via GitHub Actions Artifacts**](https://github.com/divyesh8/oasyss-flux/actions/runs/35506874748/artifacts/10604406146) |
 
-#### 🛠️ macOS Setup (3 Steps):
+#### 🛠️ macOS Setup:
 1. **Mount & Install**: Open the DMG and drag **`Oasyss Flux.app`** to **`/Applications`**.
-2. **First Launch (Gatekeeper Quarantine Bypass)**:
-   ```bash
-   xattr -cr "/Applications/Oasyss Flux.app"
-   ```
-   *(Or in Finder: Right-click `Oasyss Flux.app` → Open → Click Open).*
+2. **Official Security & Gatekeeper Verification**:
+   - Production releases are signed with an Apple Developer ID certificate and notarized by Apple.
+   - For local unsigned development builds, macOS Gatekeeper verifies the application package via standard system dialogs. Open via Finder (`Control-click` → `Open`).
 3. **Permissions**: Enable **Screen Recording** in `System Settings → Privacy & Security → Screen Recording` to allow display compositor capture exclusion verification.
 
 ---
@@ -113,8 +111,8 @@ Universal 2 binary for **Apple Silicon (M1/M2/M3/M4)** and **Intel (x86_64)**:
 ### 👻 Capture Exclusion & Screen-Share Invisibility
 - **Windows**: Win32 `WDA_EXCLUDEFROMCAPTURE` API.
 - **macOS**: Native Quartz compositor `NSWindowSharingNone`.
-- Works across **Zoom, Google Meet, Microsoft Teams, Discord, OBS, and desktop screen recorders**.
-- The interviewer only sees your IDE and coding platform underneath.
+- Attempts to exclude this window from supported screen capture mechanisms (such as Zoom, Teams, Meet, Discord, and desktop screen recorders).
+- The interviewer only sees your IDE and coding platform underneath. *Note: Operating system compositor-level protection does not guard against physical hardware capture cards or external recording devices.*
 
 ### 🪟 Complete Transparency & Click-Through Ghost Mode
 - **100% Invisible & Click-Through**: Instantly make the entire overlay completely transparent and click-through.

@@ -1,8 +1,9 @@
 /**
  * Oasyss Flux — Divyesh Edition
- * macOS Electron Main Process (Hardened)
- * Configures sandbox, display capture protection (NSWindowSharingNone),
- * native menus, click-through ghost mode, embedded browser, and hardened IPC.
+ * macOS Electron Main Process (Hardened & De-Mocked)
+ * Enforces sandbox, context isolation, zero raw Node API exposure,
+ * strict IPC schema validation, Keychain-backed AI secrets,
+ * NSWindowSharingNone display protection, and navigation lockdown.
  */
 
 const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
@@ -13,7 +14,7 @@ const { SessionManager } = require('../../core/session/SessionManager');
 const SecurityAnalysisEngine = require('../../core/analysis/SecurityAnalysisEngine');
 const { FluxConfig } = require('../../core/configuration/FluxConfig');
 const { EventLogger } = require('../../core/logging/EventLogger');
-const { AiChatService } = require('../../core/ai/AiChatService');
+const { AiChatService, ALLOWED_PROVIDERS, AvailableModels } = require('../../core/ai/AiChatService');
 const MacPlatformAdapter = require('../../platform/macos/MacPlatformAdapter');
 const MacDisplayProtectionAdapter = require('../../platform/macos/MacDisplayProtectionAdapter');
 
@@ -193,7 +194,7 @@ function setupIpc() {
   sessionMgr.on('tick', (data) => mainWindow?.webContents.send('session:tick', data));
   sessionMgr.on('state-changed', (state) => mainWindow?.webContents.send('session:state-changed', state));
 
-  // Security Analysis (Honest verification + simulation)
+  // Security Analysis (Strict input validation)
   ipcMain.handle('analysis:run', (_event, target) => {
     const safeTarget = typeof target === 'string' && target.length <= 64 ? target : 'ALL';
     return analysisEngine.runAnalysis(safeTarget);
@@ -202,7 +203,10 @@ function setupIpc() {
 
   // Event Logger
   ipcMain.handle('logger:get', (_event, filter) => {
-    const safeFilter = typeof filter === 'object' && filter !== null ? filter : {};
+    const safeFilter = typeof filter === 'object' && filter !== null ? {
+      query: typeof filter.query === 'string' ? filter.query.slice(0, 256) : '',
+      level: typeof filter.level === 'string' ? filter.level.slice(0, 32) : 'ALL'
+    } : {};
     return logger.getEntries(safeFilter);
   });
   ipcMain.handle('logger:clear', () => logger.clear());
@@ -211,22 +215,63 @@ function setupIpc() {
 
   logger.on('entry', (entry) => mainWindow?.webContents.send('logger:entry', entry));
 
-  // Configuration (Keychain-backed for API keys)
-  ipcMain.handle('config:get', () => configMgr.getAll());
+  // Configuration (Keychain-backed for API keys; SANITIZED metadata only to renderer)
+  ipcMain.handle('config:get', () => configMgr.getSanitizedSettings());
   ipcMain.handle('config:save', async (_event, newSettings) => {
     if (typeof newSettings !== 'object' || newSettings === null) return false;
-    // Persist API keys to Keychain if available on macOS
-    if (newSettings.geminiApiKey) await platformAdapter.setSecret('gemini_api_key', newSettings.geminiApiKey);
-    if (newSettings.openAiApiKey) await platformAdapter.setSecret('openai_api_key', newSettings.openAiApiKey);
-    if (newSettings.groqApiKey) await platformAdapter.setSecret('groq_api_key', newSettings.groqApiKey);
 
-    return configMgr.save(newSettings);
+    // Validate string lengths for any non-secret fields
+    const sanitized = {};
+    if (typeof newSettings.theme === 'string' && ['System', 'Dark', 'Light'].includes(newSettings.theme)) {
+      sanitized.theme = newSettings.theme;
+    }
+    if (typeof newSettings.geminiApiKey === 'string') {
+      sanitized.geminiApiKey = newSettings.geminiApiKey.trim().slice(0, 512);
+    }
+    if (typeof newSettings.openAiApiKey === 'string') {
+      sanitized.openAiApiKey = newSettings.openAiApiKey.trim().slice(0, 512);
+    }
+    if (typeof newSettings.groqApiKey === 'string') {
+      sanitized.groqApiKey = newSettings.groqApiKey.trim().slice(0, 512);
+    }
+
+    return configMgr.save(sanitized);
+  });
+
+  // AI Chat Request Handler (SECRETS STAY IN MAIN PROCESS)
+  ipcMain.handle('ai:chat', async (_event, request) => {
+    if (typeof request !== 'object' || request === null) {
+      throw new Error('Invalid AI chat request format.');
+    }
+
+    const { content, provider = 'Gemini', modelId = 'gemini-3.6-flash' } = request;
+
+    if (typeof content !== 'string' || content.trim().length === 0 || content.length > 32768) {
+      throw new Error('Invalid message content. Must be a string up to 32KB.');
+    }
+
+    if (!ALLOWED_PROVIDERS.includes(provider)) {
+      throw new Error(`Unsupported AI provider: ${provider}`);
+    }
+
+    // Retrieve API key directly from Keychain inside Main process
+    let apiKey = '';
+    if (provider === 'Gemini') {
+      apiKey = await platformAdapter.getSecret('gemini_api_key') || '';
+    } else if (provider === 'ChatGPT') {
+      apiKey = await platformAdapter.getSecret('openai_api_key') || '';
+    } else if (provider === 'Groq') {
+      apiKey = await platformAdapter.getSecret('groq_api_key') || '';
+    }
+
+    // Dispatch via core AI service
+    return aiService.sendMessage(content, provider, modelId, apiKey);
   });
 
   // Platform & Permissions
   ipcMain.handle('platform:permissions', () => platformAdapter.getPermissions());
   ipcMain.handle('platform:request-permission', (_event, id) => {
-    const safeId = typeof id === 'string' ? id : '';
+    const safeId = typeof id === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(id) ? id : '';
     return platformAdapter.requestPermission(safeId);
   });
 
@@ -236,7 +281,7 @@ function setupIpc() {
 
   // Embedded Browser Controls
   ipcMain.handle('browser:navigate', (_event, url) => {
-    if (typeof url === 'string') {
+    if (typeof url === 'string' && (url.startsWith('https://') || url.startsWith('http://'))) {
       logger.info('BROWSER', `Navigating to: ${url.slice(0, 80)}`);
       return true;
     }

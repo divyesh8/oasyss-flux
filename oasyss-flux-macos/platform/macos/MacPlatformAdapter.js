@@ -1,15 +1,16 @@
 /**
  * Oasyss Flux — Divyesh Edition
- * macOS Platform Adapter (Hardened & De-Mocked)
- * Implements real macOS Keychain credential storage, honest TCC permissions querying,
- * NSWindowSharingNone display protection, and platform paths.
+ * macOS Platform Adapter (Hardened, De-Mocked, Stdin Keychain Protocol)
+ * Implements real macOS Keychain credential storage via Security.framework,
+ * honest TCC permissions querying, NSWindowSharingNone display protection,
+ * and fail-closed security.
  */
 
 const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { execSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 class MacPlatformAdapter {
   constructor() {
@@ -21,7 +22,9 @@ class MacPlatformAdapter {
     this.keychainService = 'com.divyesh.oasyssflux';
     this.storageMode = process.platform === 'darwin' ? 'KEYCHAIN' : 'LOCAL_AES_FALLBACK';
 
-    // Real permissions state model (UNKNOWN, GRANTED, DENIED, RESTRICTED, NOT_APPLICABLE)
+    // Principle of Least Privilege:
+    // Screen recording is queried solely to verify window exclusion against the display compositor.
+    // Accessibility and Input Monitoring are NOT required by default because shortcuts are DOM-scoped.
     this.permissions = {
       screenRecording: {
         id: 'screen-recording',
@@ -34,17 +37,17 @@ class MacPlatformAdapter {
       accessibility: {
         id: 'accessibility',
         name: 'Accessibility',
-        requiredFor: 'Window Focus & Global Event Observation',
-        rationale: 'Required only when global panic hotkeys or window movement shortcuts are configured outside app focus.',
-        status: process.platform === 'darwin' ? 'UNKNOWN' : 'NOT_APPLICABLE',
+        requiredFor: 'Optional: Global Shortcuts Outside Focus',
+        rationale: 'Not required for normal operation. Shortcuts are captured in-app via window event listeners.',
+        status: process.platform === 'darwin' ? 'NOT_REQUIRED' : 'NOT_APPLICABLE',
         systemSettingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
       },
       inputMonitoring: {
         id: 'input-monitoring',
         name: 'Input Monitoring',
-        requiredFor: 'Ghost Mode Transparency Toggling',
-        rationale: 'Required to capture Shift+T toggle events when other applications are focused.',
-        status: process.platform === 'darwin' ? 'UNKNOWN' : 'NOT_APPLICABLE',
+        requiredFor: 'Optional: Global Keystroke Observation',
+        rationale: 'Not required for normal operation. In-app hotkeys operate without global event taps.',
+        status: process.platform === 'darwin' ? 'NOT_REQUIRED' : 'NOT_APPLICABLE',
         systemSettingsUrl: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent'
       },
       filesystem: {
@@ -100,50 +103,43 @@ class MacPlatformAdapter {
   }
 
   // ──────────────────────────────────────────────
-  //  Real macOS Keychain / Secure Storage
+  //  Real macOS Keychain (Security.framework via Stdin Protocol)
   // ──────────────────────────────────────────────
 
+  _validateAccount(account) {
+    if (typeof account !== 'string' || !/^[a-zA-Z0-9_.-]{1,128}$/.test(account)) {
+      throw new Error(`Invalid Keychain account identifier: ${account}`);
+    }
+  }
+
   async setSecret(account, secret) {
-    if (!secret) return false;
+    if (!secret || typeof secret !== 'string') return false;
+    this._validateAccount(account);
 
     if (process.platform === 'darwin') {
-      try {
-        // Attempt native macOS security CLI
-        const cmd = `security add-generic-password -a "${account}" -s "${this.keychainService}" -w "${secret}" -U`;
-        execSync(cmd, { stdio: 'pipe' });
-        return true;
-      } catch (err) {
-        console.warn('[MacPlatformAdapter] Keychain store via security CLI failed, attempting Swift helper:', err.message);
-        return this._setSecretViaSwiftHelper(account, secret);
-      }
+      // Use native Swift helper interfacing with Security.framework via stdin protocol.
+      // NEVER pass secrets as process arguments (argv) or through shell strings.
+      return this._setSecretViaSwiftHelper(account, secret);
     }
 
-    // Fallback for non-macOS development/testing host: User-bound AES-256
-    return this._fallbackEncrypt(secret);
+    // Host-bound AES-256 encryption for non-macOS test execution only
+    return this.encrypt(secret);
   }
 
   async getSecret(account) {
+    this._validateAccount(account);
+
     if (process.platform === 'darwin') {
-      try {
-        const cmd = `security find-generic-password -a "${account}" -s "${this.keychainService}" -w`;
-        const output = execSync(cmd, { stdio: 'pipe' }).toString().trim();
-        return output;
-      } catch (err) {
-        return this._getSecretViaSwiftHelper(account);
-      }
+      return this._getSecretViaSwiftHelper(account);
     }
-    return '';
+    return null;
   }
 
   async deleteSecret(account) {
+    this._validateAccount(account);
+
     if (process.platform === 'darwin') {
-      try {
-        const cmd = `security delete-generic-password -a "${account}" -s "${this.keychainService}"`;
-        execSync(cmd, { stdio: 'pipe' });
-        return true;
-      } catch (err) {
-        return this._deleteSecretViaSwiftHelper(account);
-      }
+      return this._deleteSecretViaSwiftHelper(account);
     }
     return true;
   }
@@ -159,14 +155,26 @@ class MacPlatformAdapter {
 
   _setSecretViaSwiftHelper(account, secret) {
     const helper = this._getHelperPath('flux-keychain-helper');
-    if (!helper) return false;
+    if (!helper) {
+      console.error('[MacPlatformAdapter] Keychain helper not found. Failing closed.');
+      return false;
+    }
+
     try {
+      // Secrets are passed strictly via STDIN (input option) - never in argv
       const res = helper.endsWith('.swift')
-        ? spawnSync('swift', [helper, 'set', account, secret], { encoding: 'utf8' })
-        : spawnSync(helper, ['set', account, secret], { encoding: 'utf8' });
+        ? spawnSync('swift', [helper, 'set', account], { input: secret, encoding: 'utf8' })
+        : spawnSync(helper, ['set', account], { input: secret, encoding: 'utf8' });
+
+      if (res.status !== 0) {
+        console.error('[MacPlatformAdapter] Keychain helper set exited with non-zero code');
+        return false;
+      }
+
       const parsed = JSON.parse(res.stdout || '{}');
       return !!parsed.success;
-    } catch {
+    } catch (err) {
+      console.error('[MacPlatformAdapter] Keychain helper execution failed. Failing closed.');
       return false;
     }
   }
@@ -174,10 +182,13 @@ class MacPlatformAdapter {
   _getSecretViaSwiftHelper(account) {
     const helper = this._getHelperPath('flux-keychain-helper');
     if (!helper) return null;
+
     try {
       const res = helper.endsWith('.swift')
         ? spawnSync('swift', [helper, 'get', account], { encoding: 'utf8' })
         : spawnSync(helper, ['get', account], { encoding: 'utf8' });
+
+      if (res.status !== 0) return null;
       const parsed = JSON.parse(res.stdout || '{}');
       return parsed.success ? parsed.secret : null;
     } catch {
@@ -188,16 +199,23 @@ class MacPlatformAdapter {
   _deleteSecretViaSwiftHelper(account) {
     const helper = this._getHelperPath('flux-keychain-helper');
     if (!helper) return false;
+
     try {
       const res = helper.endsWith('.swift')
         ? spawnSync('swift', [helper, 'delete', account], { encoding: 'utf8' })
         : spawnSync(helper, ['delete', account], { encoding: 'utf8' });
+
+      if (res.status !== 0) return false;
       const parsed = JSON.parse(res.stdout || '{}');
       return !!parsed.success;
     } catch {
       return false;
     }
   }
+
+  // ──────────────────────────────────────────────
+  //  Cryptographic Fallback for Non-macOS Hosts (Fail-Closed)
+  // ──────────────────────────────────────────────
 
   _getFallbackKey() {
     const userIdentifier = os.userInfo().username + '@' + os.hostname() + '::OasyssFlux::DivyeshEdition';
@@ -216,8 +234,8 @@ class MacPlatformAdapter {
       const combined = `${iv.toString('hex')}:${authTag}:${encrypted}`;
       return this.prefix + Buffer.from(combined).toString('base64');
     } catch (err) {
-      console.error('[MacPlatformAdapter] Encryption failed:', err);
-      return plaintext;
+      // FAIL CLOSED: Never return plaintext if encryption fails
+      throw new Error('Secure credential encryption failed. Operation aborted.');
     }
   }
 
@@ -235,78 +253,64 @@ class MacPlatformAdapter {
         decrypted += decipher.final('utf8');
         return decrypted;
       } catch (err) {
-        console.error('[MacPlatformAdapter] Decryption failed:', err);
-        return '';
+        throw new Error('Secure credential decryption failed. Value cannot be recovered.');
       }
     }
 
     if (ciphertext.startsWith('dpapi::')) {
-      console.warn('[MacPlatformAdapter] Windows DPAPI key detected on macOS. Re-authentication required.');
-      return '';
+      throw new Error('Windows DPAPI credential detected on macOS. Re-authentication required.');
     }
 
-    return ciphertext;
+    // Unrecognized or unencrypted format: reject rather than returning plaintext
+    throw new Error('Invalid or unencrypted ciphertext format.');
   }
 
   // ──────────────────────────────────────────────
-  //  Real macOS Permissions Querying (De-Mocked)
+  //  Honest Permissions Querying (Apple TCC)
   // ──────────────────────────────────────────────
 
   async getPermissions() {
-    if (process.platform !== 'darwin') {
-      // Running on Windows / Linux development host
-      return { ...this.permissions };
-    }
+    if (process.platform === 'darwin') {
+      const helper = this._getHelperPath('flux-permissions-helper');
+      if (helper) {
+        try {
+          const res = helper.endsWith('.swift')
+            ? spawnSync('swift', [helper], { encoding: 'utf8' })
+            : spawnSync(helper, [], { encoding: 'utf8' });
 
-    // On real macOS: query native Swift helper
-    const helper = this._getHelperPath('flux-permissions-helper');
-    if (helper) {
-      try {
-        const res = helper.endsWith('.swift')
-          ? spawnSync('swift', [helper], { encoding: 'utf8' })
-          : spawnSync(helper, [], { encoding: 'utf8' });
-        if (res.stdout) {
-          const parsed = JSON.parse(res.stdout);
-          if (parsed.screenRecording) this.permissions.screenRecording.status = parsed.screenRecording;
-          if (parsed.accessibility) this.permissions.accessibility.status = parsed.accessibility;
-          if (parsed.inputMonitoring) this.permissions.inputMonitoring.status = parsed.inputMonitoring;
+          if (res.status === 0 && res.stdout) {
+            const data = JSON.parse(res.stdout);
+            if (this.permissions.screenRecording) {
+              this.permissions.screenRecording.status = data.screenRecording || 'UNKNOWN';
+            }
+          }
+        } catch (err) {
+          console.warn('[MacPlatformAdapter] Could not query TCC via helper:', err.message);
         }
-      } catch (err) {
-        console.warn('[MacPlatformAdapter] Permissions helper query failed:', err.message);
       }
     }
-
     return { ...this.permissions };
   }
 
   requestPermission(permissionId) {
-    const perm = Object.values(this.permissions).find(p => p.id === permissionId);
-    if (!perm) return { success: false, message: 'Unknown permission identifier.' };
+    const perm = this.permissions[permissionId] || Object.values(this.permissions).find(p => p.id === permissionId);
+    if (!perm) return { success: false, status: 'UNKNOWN_PERMISSION', message: 'Unknown permission' };
 
     if (process.platform !== 'darwin') {
-      return {
-        success: false,
-        status: 'UNSUPPORTED_ON_HOST',
-        message: 'macOS permissions can only be requested and authorized on a physical macOS system.'
-      };
+      return { success: false, status: 'UNSUPPORTED_ON_HOST', message: 'Permission requests are supported only on macOS.' };
     }
 
-    // Guide user to appropriate macOS System Settings pane
     if (perm.systemSettingsUrl) {
       try {
         const { shell } = require('electron');
         shell.openExternal(perm.systemSettingsUrl);
-      } catch (err) {
-        execSync(`open "${perm.systemSettingsUrl}"`);
+        return { success: true, status: 'OPENED_SETTINGS', message: `Opened System Settings for ${perm.name}. Please grant access and restart if required.` };
+      } catch {
+        return { success: false, status: 'OPEN_FAILED', message: `Please open System Settings → Privacy & Security → ${perm.name} manually.` };
       }
     }
 
-    return {
-      success: true,
-      permission: perm,
-      status: perm.status,
-      message: `Navigated to macOS System Settings → Privacy & Security for '${perm.name}'. Authorization must be granted manually by the user.`
-    };
+    return { success: true, status: 'GRANTED', message: `${perm.name} is managed at the system or session level.` };
   }
 
   buildNativeMenuTemplate(callbacks = {}) {
@@ -314,9 +318,9 @@ class MacPlatformAdapter {
       {
         label: 'Oasyss Flux',
         submenu: [
-          { label: 'About Oasyss Flux', click: callbacks.onAbout || (() => {}) },
+          { label: 'About Oasyss Flux', click: callbacks.onAbout },
           { type: 'separator' },
-          { label: 'Settings...', accelerator: 'CmdOrCtrl+,', click: callbacks.onSettings || (() => {}) },
+          { label: 'Preferences...', accelerator: 'Cmd+,', click: callbacks.onSettings },
           { type: 'separator' },
           { role: 'services' },
           { type: 'separator' },
@@ -324,41 +328,39 @@ class MacPlatformAdapter {
           { role: 'hideOthers' },
           { role: 'unhide' },
           { type: 'separator' },
-          { label: 'Quit Oasyss Flux', accelerator: 'CmdOrCtrl+Q', role: 'quit' }
+          { role: 'quit', accelerator: 'Cmd+Q' }
         ]
       },
       {
         label: 'File',
         submenu: [
-          { label: 'New Session', accelerator: 'CmdOrCtrl+N', click: callbacks.onNewSession || (() => {}) },
-          { label: 'New Browser Tab', accelerator: 'CmdOrCtrl+T', click: callbacks.onNewTab || (() => {}) },
+          { label: 'New Session', accelerator: 'CmdOrCtrl+N', click: callbacks.onNewSession },
+          { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: callbacks.onNewTab },
           { type: 'separator' },
-          { label: 'Close Session', accelerator: 'CmdOrCtrl+W', click: callbacks.onCloseSession || (() => {}) }
+          { label: 'Close Session', click: callbacks.onCloseSession },
+          { type: 'separator' },
+          { role: 'close' }
         ]
       },
       {
         label: 'Session',
         submenu: [
-          { label: 'Start Session', click: callbacks.onStartSession || (() => {}) },
-          { label: 'Pause Session', click: callbacks.onPauseSession || (() => {}) },
-          { label: 'Stop Session', click: callbacks.onStopSession || (() => {}) },
-          { type: 'separator' },
-          { label: 'Reset Session', click: callbacks.onResetSession || (() => {}) }
+          { label: 'Start Session', click: callbacks.onStartSession },
+          { label: 'Pause Session', click: callbacks.onPauseSession },
+          { label: 'Stop Session', click: callbacks.onStopSession },
+          { label: 'Reset Session', click: callbacks.onResetSession }
         ]
       },
       {
         label: 'View',
         submenu: [
-          { label: 'Overview', accelerator: 'CmdOrCtrl+1', click: callbacks.onViewOverview || (() => {}) },
-          { label: 'Browser', accelerator: 'CmdOrCtrl+2', click: callbacks.onViewBrowser || (() => {}) },
-          { label: 'Sessions', accelerator: 'CmdOrCtrl+3', click: callbacks.onViewSessions || (() => {}) },
-          { label: 'Analysis', accelerator: 'CmdOrCtrl+4', click: callbacks.onViewAnalysis || (() => {}) },
-          { label: 'Event Log', accelerator: 'CmdOrCtrl+5', click: callbacks.onViewLogs || (() => {}) },
+          { label: 'Overview', accelerator: 'CmdOrCtrl+1', click: callbacks.onViewOverview },
+          { label: 'Embedded Browser', accelerator: 'CmdOrCtrl+2', click: callbacks.onViewBrowser },
+          { label: 'Sessions', accelerator: 'CmdOrCtrl+3', click: callbacks.onViewSessions },
+          { label: 'Security Analysis', accelerator: 'CmdOrCtrl+4', click: callbacks.onViewAnalysis },
+          { label: 'Event Log', accelerator: 'CmdOrCtrl+5', click: callbacks.onViewLogs },
           { type: 'separator' },
-          { label: 'Toggle Click-Through Ghost Mode', accelerator: 'Shift+CmdOrCtrl+T', click: callbacks.onToggleClickThrough || (() => {}) },
-          { type: 'separator' },
-          { label: 'Command Palette...', accelerator: 'CmdOrCtrl+K', click: callbacks.onCommandPalette || (() => {}) },
-          { label: 'Search...', accelerator: 'CmdOrCtrl+F', click: callbacks.onSearch || (() => {}) },
+          { label: 'Toggle Click-Through (Ghost Mode)', accelerator: 'Shift+CmdOrCtrl+T', click: callbacks.onToggleClickThrough },
           { type: 'separator' },
           { role: 'reload' },
           { role: 'forceReload' },
@@ -368,18 +370,23 @@ class MacPlatformAdapter {
       {
         label: 'Window',
         submenu: [
-          { role: 'minimize', accelerator: 'CmdOrCtrl+M' },
+          { role: 'minimize' },
           { role: 'zoom' },
           { type: 'separator' },
-          { role: 'togglefullscreen' },
           { role: 'front' }
+        ]
+      },
+      {
+        label: 'Tools',
+        submenu: [
+          { label: 'Command Palette...', accelerator: 'CmdOrCtrl+K', click: callbacks.onCommandPalette },
+          { label: 'Run Security Diagnostics', click: callbacks.onDiagnostics }
         ]
       },
       {
         label: 'Help',
         submenu: [
-          { label: 'Documentation', click: callbacks.onDocumentation || (() => {}) },
-          { label: 'Run Diagnostics', click: callbacks.onDiagnostics || (() => {}) }
+          { label: 'Security Policy & Documentation', click: callbacks.onDocumentation }
         ]
       }
     ];

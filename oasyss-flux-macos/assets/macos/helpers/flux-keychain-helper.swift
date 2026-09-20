@@ -2,13 +2,14 @@ import Foundation
 import Security
 
 // Oasyss Flux — Divyesh Edition
-// Native macOS Keychain Helper
+// Native macOS Keychain Helper (Hardened & Stdin Protocol)
 // Interfaces directly with Apple Security.framework for secure credential storage.
+// SECRETS ARE READ EXCLUSIVELY VIA STDIN TO PREVENT ARGV LEAKAGE.
 
 let serviceName = "com.divyesh.oasyssflux"
 
-func setSecret(account: String, secret: String) -> Bool {
-    guard let secretData = secret.data(using: .utf8) else { return false }
+func setSecret(account: String, secretData: Data) -> Bool {
+    guard !secretData.isEmpty else { return false }
 
     let query: [String: Any] = [
         kSecClass as String: kSecClassGenericPassword,
@@ -68,12 +69,26 @@ func deleteSecret(account: String) -> Bool {
 let args = CommandLine.arguments
 
 if args.count < 3 {
-    print("{\"error\": \"Usage: flux-keychain-helper <get|set|delete> <account> [secret]\"}")
+    let errJson = ["error": "Usage: flux-keychain-helper <get|set|delete> <account>"]
+    if let data = try? JSONSerialization.data(withJSONObject: errJson), let str = String(data: data, encoding: .utf8) {
+        print(str)
+    }
     exit(1)
 }
 
 let action = args[1]
 let account = args[2]
+
+// Validate account name: alphanumeric, underscore, dot, hyphen, max 128 chars
+let accountRegex = try! NSRegularExpression(pattern: "^[a-zA-Z0-9_.-]{1,128}$")
+let range = NSRange(location: 0, length: account.utf16.count)
+guard accountRegex.firstMatch(in: account, options: [], range: range) != nil else {
+    let errJson = ["success": false, "error": "Invalid account identifier format"] as [String : Any]
+    if let data = try? JSONSerialization.data(withJSONObject: errJson), let str = String(data: data, encoding: .utf8) {
+        print(str)
+    }
+    exit(1)
+}
 
 switch action {
 case "get":
@@ -86,16 +101,29 @@ case "get":
         print("{\"success\": false, \"message\": \"Item not found in Keychain\"}")
     }
 case "set":
-    guard args.count >= 4 else {
-        print("{\"error\": \"Missing secret argument\"}")
+    // Read secret exclusively from standard input (stdin)
+    let stdinHandle = FileHandle.standardInput
+    let secretData = stdinHandle.readDataToEndOfFile()
+    
+    // Trim trailing newline or whitespace if any
+    var trimmedData = secretData
+    if let str = String(data: secretData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+       let utf8 = str.data(using: .utf8) {
+        trimmedData = utf8
+    }
+
+    guard !trimmedData.isEmpty else {
+        print("{\"success\": false, \"error\": \"No secret provided on stdin\"}")
         exit(1)
     }
-    let secret = args[3]
-    let ok = setSecret(account: account, secret: secret)
+
+    let ok = setSecret(account: account, secretData: trimmedData)
     print("{\"success\": \(ok)}")
+    exit(ok ? 0 : 1)
 case "delete":
     let ok = deleteSecret(account: account)
     print("{\"success\": \(ok)}")
+    exit(ok ? 0 : 1)
 default:
     print("{\"error\": \"Unknown action\"}")
     exit(1)

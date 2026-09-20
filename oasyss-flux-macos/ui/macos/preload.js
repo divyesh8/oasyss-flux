@@ -1,7 +1,8 @@
 /**
  * Oasyss Flux — Divyesh Edition
  * Hardened Preload Script
- * Strictly typed context bridge with zero raw ipcRenderer/Node exposure.
+ * Strictly typed context bridge with zero raw Node.js or ipcRenderer exposure.
+ * Secrets never cross this bridge; renderer only receives sanitized metadata.
  */
 
 const { contextBridge, ipcRenderer } = require('electron');
@@ -47,10 +48,19 @@ contextBridge.exposeInMainWorld('flux', {
     }
   },
 
-  // Configuration API
+  // Configuration API (Sanitized metadata only)
   config: {
     getSettings: () => ipcRenderer.invoke('config:get'),
-    saveSettings: (settings) => ipcRenderer.invoke('config:save', settings || {})
+    saveSettings: (settings) => ipcRenderer.invoke('config:save', typeof settings === 'object' && settings !== null ? settings : {})
+  },
+
+  // AI Chat API (Keychain-backed in Main process, secrets never enter renderer)
+  ai: {
+    sendMessage: (content, provider, modelId) => ipcRenderer.invoke('ai:chat', {
+      content: typeof content === 'string' ? content : '',
+      provider: typeof provider === 'string' ? provider : 'Gemini',
+      modelId: typeof modelId === 'string' ? modelId : 'gemini-3.6-flash'
+    })
   },
 
   // Platform & Permissions API

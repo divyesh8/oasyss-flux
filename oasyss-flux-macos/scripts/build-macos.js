@@ -2,12 +2,16 @@
  * Oasyss Flux — Divyesh Edition
  * macOS Production Application Build & Packaging Script
  * Compiles genuine macOS application bundles with real Mach-O binaries,
- * universal architecture (ARM64 + x86_64), and complete Electron Frameworks.
+ * universal architecture (ARM64 + x86_64), complete Electron Frameworks,
+ * structured nested code signing, and SBOM generation.
+ *
+ * Hardened: Uses spawnSync with explicit argument arrays (zero shell interpolation).
  */
 
-const { execSync, spawnSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const DIST = path.join(ROOT, 'dist');
@@ -35,10 +39,8 @@ async function compileSwiftHelpers() {
     return;
   }
 
-  // Check if swiftc is available
-  try {
-    execSync('which swiftc', { stdio: 'pipe' });
-  } catch {
+  const whichRes = spawnSync('which', ['swiftc'], { encoding: 'utf8' });
+  if (whichRes.status !== 0) {
     log('swiftc not found on PATH. Helpers will run via swift interpreter.');
     return;
   }
@@ -46,27 +48,74 @@ async function compileSwiftHelpers() {
   for (const h of helpers) {
     const srcPath = path.join(helpersDir, h.src);
     const binPath = path.join(helpersDir, h.bin);
+    const arm64Path = `${binPath}-arm64`;
+    const x64Path = `${binPath}-x64`;
+
     log(`Compiling native universal helper: ${h.bin}...`);
     try {
-      // Compile universal binary for ARM64 + x86_64
-      execSync(`swiftc -target arm64-apple-macos11.0 "${srcPath}" -o "${binPath}-arm64"`, { stdio: 'pipe' });
-      execSync(`swiftc -target x86_64-apple-macos10.15 "${srcPath}" -o "${binPath}-x64"`, { stdio: 'pipe' });
-      execSync(`lipo -create "${binPath}-arm64" "${binPath}-x64" -output "${binPath}"`, { stdio: 'pipe' });
-      fs.unlinkSync(`${binPath}-arm64`);
-      fs.unlinkSync(`${binPath}-x64`);
-      fs.chmodSync(binPath, 0o755);
-      log(`✓ Compiled universal binary: ${h.bin}`);
+      const r1 = spawnSync('swiftc', ['-target', 'arm64-apple-macos11.0', srcPath, '-o', arm64Path], { stdio: 'pipe' });
+      const r2 = spawnSync('swiftc', ['-target', 'x86_64-apple-macos10.15', srcPath, '-o', x64Path], { stdio: 'pipe' });
+      if (r1.status === 0 && r2.status === 0) {
+        spawnSync('lipo', ['-create', arm64Path, x64Path, '-output', binPath], { stdio: 'pipe' });
+        if (fs.existsSync(arm64Path)) fs.unlinkSync(arm64Path);
+        if (fs.existsSync(x64Path)) fs.unlinkSync(x64Path);
+        fs.chmodSync(binPath, 0o755);
+        log(`✓ Compiled universal binary: ${h.bin}`);
+      } else {
+        throw new Error('Multi-target compilation failed');
+      }
     } catch (err) {
       log(`Warning: Universal compilation failed (${err.message}). Attempting host native compilation...`);
-      try {
-        execSync(`swiftc "${srcPath}" -o "${binPath}"`, { stdio: 'pipe' });
+      const fallback = spawnSync('swiftc', [srcPath, '-o', binPath], { stdio: 'pipe' });
+      if (fallback.status === 0) {
         fs.chmodSync(binPath, 0o755);
         log(`✓ Compiled host binary: ${h.bin}`);
-      } catch (err2) {
-        log(`Warning: swiftc compilation failed: ${err2.message}. Will use interpreter fallback.`);
+      } else {
+        log(`Warning: swiftc compilation failed. Will use interpreter fallback.`);
       }
     }
   }
+}
+
+function generateSbom(outDir) {
+  log('Generating Software Bill of Materials (SBOM)...');
+  const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
+  const lockJsonPath = path.join(ROOT, 'package-lock.json');
+  let lockHash = '';
+  if (fs.existsSync(lockJsonPath)) {
+    const lockBytes = fs.readFileSync(lockJsonPath);
+    lockHash = crypto.createHash('sha256').update(lockBytes).digest('hex');
+  }
+
+  let gitCommit = 'UNKNOWN';
+  try {
+    const gitRes = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
+    if (gitRes.status === 0) gitCommit = gitRes.stdout.trim();
+  } catch {}
+
+  const sbom = {
+    application: APP_NAME,
+    bundleId: BUNDLE_ID,
+    version: VERSION,
+    releaseTarget: 'macOS Universal 2 (arm64 + x86_64)',
+    buildTimestamp: new Date().toISOString(),
+    gitCommit,
+    nodeVersion: process.version,
+    electronVersion: packageJson.devDependencies?.electron || 'unknown',
+    packageLockSha256: lockHash,
+    license: packageJson.license || 'GPL-3.0',
+    components: [
+      { name: 'electron', version: packageJson.devDependencies?.electron, type: 'framework' },
+      { name: '@electron/universal', version: packageJson.devDependencies?.['@electron/universal'], type: 'build-tool' },
+      { name: 'electron-packager', version: packageJson.devDependencies?.['electron-packager'], type: 'build-tool' },
+      { name: 'flux-keychain-helper', language: 'Swift', framework: 'Security.framework', type: 'native-helper' },
+      { name: 'flux-permissions-helper', language: 'Swift', framework: 'CoreGraphics/ApplicationServices', type: 'native-helper' }
+    ]
+  };
+
+  const sbomPath = path.join(outDir, 'sbom.json');
+  fs.writeFileSync(sbomPath, JSON.stringify(sbom, null, 2), 'utf8');
+  log(`✓ SBOM generated: ${sbomPath}`);
 }
 
 async function build() {
@@ -91,9 +140,9 @@ async function build() {
   if (!fs.existsSync(iconPath)) {
     log('Generating native macOS icon...');
     if (process.platform === 'win32') {
-      execSync('powershell -ExecutionPolicy Bypass -File assets\\macos\\generate-icns.ps1', { cwd: ROOT, stdio: 'inherit' });
+      spawnSync('powershell', ['-ExecutionPolicy', 'Bypass', '-File', 'assets\\macos\\generate-icns.ps1'], { cwd: ROOT, stdio: 'inherit' });
     } else {
-      execSync('python3 assets/macos/generate-icns.py', { cwd: ROOT, stdio: 'inherit' });
+      spawnSync('python3', ['assets/macos/generate-icns.py'], { cwd: ROOT, stdio: 'inherit' });
     }
   }
 
@@ -132,14 +181,6 @@ async function build() {
       /^\/docs/,
       /^\/tests/,
       /^\/dist/,
-      /^\/Release/,
-      /^\/bin/,
-      /^\/obj/,
-      /^\/\.vs/,
-      /\.cs$/,
-      /\.xaml$/,
-      /\.csproj$/,
-      /\.sln$/,
       /\.dmg$/,
       /\.zip$/,
       /\.log$/,
@@ -191,7 +232,6 @@ async function build() {
 
     try {
       const { makeUniversalApp } = require('@electron/universal');
-      // Ensure target directory exists
       fs.mkdirSync(path.dirname(universalOut), { recursive: true });
       await makeUniversalApp({
         x64AppPath: x64App,
@@ -199,19 +239,17 @@ async function build() {
         outAppPath: universalOut,
         force: true
       });
+      log(`✓ Universal 2 application assembled: ${universalOut}`);
 
-      // Ensure app icon is present in Resources
+      // Copy native AppIcon.icns into resources
       const resDir = path.join(universalOut, 'Contents', 'Resources');
-      if (fs.existsSync(resDir)) {
-        if (!fs.existsSync(path.join(resDir, 'app.icns'))) {
-          fs.copyFileSync(iconPath, path.join(resDir, 'app.icns'));
-        }
-        if (!fs.existsSync(path.join(resDir, 'AppIcon.icns'))) {
-          fs.copyFileSync(iconPath, path.join(resDir, 'AppIcon.icns'));
-        }
+      if (fs.existsSync(resDir) && fs.existsSync(iconPath)) {
+        fs.copyFileSync(iconPath, path.join(resDir, 'app.icns'));
       }
 
-      log(`✓ Universal macOS Application assembled at: ${universalOut}`);
+      // Generate SBOM in dist
+      generateSbom(DIST);
+
     } catch (err) {
       error(`Universal assembly failed: ${err.message}`);
       throw err;
@@ -219,12 +257,11 @@ async function build() {
   }
 
   log('====================================================');
-  log('Build process completed successfully.');
-  log(`Output directory: ${DIST}`);
+  log('macOS build pipeline completed successfully.');
   log('====================================================');
 }
 
 build().catch(err => {
-  error(`Build failed: ${err.message}`);
+  error(`Build terminated: ${err.message}`);
   process.exit(1);
 });

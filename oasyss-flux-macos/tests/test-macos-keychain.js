@@ -1,8 +1,8 @@
 /**
  * Oasyss Flux — Divyesh Edition
- * macOS Native Keychain Security Test
+ * macOS Native Keychain Security Test (Hardened Stdin Protocol)
  * Tests real Apple Security.framework operations (SecItemAdd, SecItemCopyMatching, SecItemDelete)
- * via the native flux-keychain-helper without secret leakage.
+ * via the native flux-keychain-helper with secret passed via STDIN (never in argv).
  */
 
 const assert = require('assert');
@@ -15,16 +15,20 @@ const ROOT = path.resolve(__dirname, '..');
 const HELPER_SWIFT = path.join(ROOT, 'assets', 'macos', 'helpers', 'flux-keychain-helper.swift');
 const HELPER_BIN = path.join(ROOT, 'assets', 'macos', 'helpers', 'flux-keychain-helper');
 
-function runHelper(args) {
-  if (fs.existsSync(HELPER_BIN)) {
-    return spawnSync(HELPER_BIN, args, { encoding: 'utf8' });
+function runHelper(args, input = null) {
+  const options = { encoding: 'utf8' };
+  if (input !== null) {
+    options.input = input;
   }
-  return spawnSync('swift', [HELPER_SWIFT, ...args], { encoding: 'utf8' });
+  if (fs.existsSync(HELPER_BIN)) {
+    return spawnSync(HELPER_BIN, args, options);
+  }
+  return spawnSync('swift', [HELPER_SWIFT, ...args], options);
 }
 
 async function runKeychainTest() {
   console.log('====================================================');
-  console.log('Oasyss Flux: macOS Native Keychain Security Test');
+  console.log('Oasyss Flux: macOS Native Keychain Security Test (Stdin Protocol)');
   console.log('====================================================\n');
 
   if (process.platform !== 'darwin') {
@@ -38,14 +42,15 @@ async function runKeychainTest() {
   const testSecret = `probe_secret_${crypto.randomBytes(16).toString('hex')}`;
 
   console.log(`Probe Account: ${testAccount}`);
-  console.log('Testing SecItemAdd (Write)...');
+  console.log('Testing SecItemAdd via STDIN (Write)...');
 
-  // 1. Write Credential (SecItemAdd)
-  const setRes = runHelper(['set', testAccount, testSecret]);
+  // 1. Write Credential (SecItemAdd via STDIN)
+  // Notice: testSecret is passed via STDIN (input), NOT in args!
+  const setRes = runHelper(['set', testAccount], testSecret);
   assert.strictEqual(setRes.status, 0, `Helper exit code: ${setRes.status}, stderr: ${setRes.stderr}`);
   const setJson = JSON.parse(setRes.stdout.trim());
   assert.strictEqual(setJson.success, true, 'SecItemAdd must succeed');
-  console.log('✓ [PASS] SecItemAdd: Credential stored successfully in Keychain.');
+  console.log('✓ [PASS] SecItemAdd: Credential stored successfully via STDIN.');
 
   // 2. Read Credential (SecItemCopyMatching)
   console.log('Testing SecItemCopyMatching (Read)...');

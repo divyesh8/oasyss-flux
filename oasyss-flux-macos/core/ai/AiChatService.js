@@ -1,7 +1,9 @@
 /**
  * Oasyss Flux — Divyesh Edition
- * Core Multi-Model AI Service
- * Supports Google Gemini, OpenAI ChatGPT, and Groq Cloud with zero extra dependencies.
+ * Core Multi-Model AI Service (Hardened Network Boundaries)
+ * Supports Google Gemini, OpenAI ChatGPT, and Groq Cloud via explicit HTTPS endpoints.
+ * All queries sent to AI providers leave the local machine via encrypted TLS to reach
+ * the respective provider's cloud inference infrastructure.
  */
 
 const https = require('https');
@@ -22,6 +24,8 @@ const AvailableModels = {
     { displayName: 'Llama 3.1 8B (Ultra-Fast)', modelId: 'llama-3.1-8b-instant', provider: 'Groq' }
   ]
 };
+
+const ALLOWED_PROVIDERS = ['Gemini', 'ChatGPT', 'Groq'];
 
 class AiChatService extends EventEmitter {
   constructor() {
@@ -45,14 +49,32 @@ class AiChatService extends EventEmitter {
     return AvailableModels;
   }
 
+  validateRequest(content, provider, modelId) {
+    if (typeof content !== 'string' || content.trim().length === 0) {
+      throw new Error('Message content must be a non-empty string.');
+    }
+    if (content.length > 32768) {
+      throw new Error('Message content exceeds maximum allowed length of 32KB.');
+    }
+    if (!ALLOWED_PROVIDERS.includes(provider)) {
+      throw new Error(`Unsupported AI provider: '${provider}'. Allowed: ${ALLOWED_PROVIDERS.join(', ')}`);
+    }
+    const validModels = AvailableModels[provider]?.map(m => m.modelId) || [];
+    if (!validModels.includes(modelId)) {
+      throw new Error(`Invalid model '${modelId}' for provider '${provider}'. Allowed: ${validModels.join(', ')}`);
+    }
+  }
+
   async sendMessage(content, provider = 'Gemini', modelId = 'gemini-3.6-flash', apiKey = '') {
+    this.validateRequest(content, provider, modelId);
+
     const userMsg = { role: 'user', content, timestamp: new Date().toISOString() };
     this.history.push(userMsg);
     this.emit('message', userMsg);
 
     const logger = this.engine?.getSubsystem('logger');
     if (logger) {
-      logger.info('ENGINE', `Dispatching AI query via ${provider} (${modelId})`);
+      logger.info('ENGINE', `Dispatching outbound AI request to ${provider} (${modelId})`);
     }
 
     let responseText = '';
@@ -63,11 +85,11 @@ class AiChatService extends EventEmitter {
         responseText = await this._sendOpenAi(this.history, modelId, apiKey);
       } else if (provider === 'Groq') {
         responseText = await this._sendGroq(this.history, modelId, apiKey);
-      } else {
-        responseText = `⚠️ Unsupported AI provider: ${provider}`;
       }
     } catch (err) {
-      responseText = `❌ AI Request Error: ${err.message}`;
+      // Sanitize error message to guarantee zero secret leakage
+      const sanitized = err.message.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]');
+      responseText = `❌ AI Request Error: ${sanitized}`;
     }
 
     const assistantMsg = { role: 'assistant', content: responseText, timestamp: new Date().toISOString() };
@@ -79,7 +101,7 @@ class AiChatService extends EventEmitter {
 
   _sendGemini(history, modelId, apiKey) {
     if (!apiKey) {
-      return Promise.resolve('⚠️ Gemini API key not set. Go to Settings → AI Configuration to add your key.\nGet a free key at: https://aistudio.google.com/apikey');
+      return Promise.resolve('⚠️ Gemini API key not configured. Set your key in Settings → AI Configuration.');
     }
 
     return new Promise((resolve, reject) => {
@@ -89,16 +111,17 @@ class AiChatService extends EventEmitter {
       }));
 
       const payload = JSON.stringify({ contents });
-      const path = `/v1beta/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
+      // SECURITY: Pass API key via x-goog-api-key header instead of URL query parameter
       const options = {
         hostname: 'generativelanguage.googleapis.com',
         port: 443,
-        path,
+        path: `/v1beta/models/${encodeURIComponent(modelId)}:generateContent`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload)
+          'Content-Length': Buffer.byteLength(payload),
+          'x-goog-api-key': apiKey
         }
       };
 
@@ -109,17 +132,18 @@ class AiChatService extends EventEmitter {
           try {
             const parsed = JSON.parse(body);
             if (res.statusCode >= 400) {
-              return resolve(`❌ Gemini API Error (${res.statusCode}): ${parsed?.error?.message || body.slice(0, 200)}`);
+              const errMsg = parsed?.error?.message ? parsed.error.message.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]') : 'API returned error';
+              return resolve(`❌ Gemini API Error (${res.statusCode}): ${errMsg}`);
             }
             const candidate = parsed?.candidates?.[0]?.content?.parts?.[0]?.text;
             resolve(candidate || 'No response received.');
-          } catch (e) {
-            resolve(`❌ Could not parse Gemini response:\n${body.slice(0, 200)}`);
+          } catch {
+            resolve('❌ Could not parse response from Gemini API.');
           }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => reject(new Error(`Network connection error: ${err.code || 'UNKNOWN'}`)));
       req.write(payload);
       req.end();
     });
@@ -127,7 +151,7 @@ class AiChatService extends EventEmitter {
 
   _sendOpenAi(history, modelId, apiKey) {
     if (!apiKey) {
-      return Promise.resolve('⚠️ OpenAI API key not set. Go to Settings → AI Configuration to add your key.\nGet a key at: https://platform.openai.com/api-keys');
+      return Promise.resolve('⚠️ OpenAI API key not configured. Set your key in Settings → AI Configuration.');
     }
 
     return new Promise((resolve, reject) => {
@@ -161,17 +185,18 @@ class AiChatService extends EventEmitter {
           try {
             const parsed = JSON.parse(body);
             if (res.statusCode >= 400) {
-              return resolve(`❌ OpenAI API Error (${res.statusCode}): ${parsed?.error?.message || body.slice(0, 200)}`);
+              const errMsg = parsed?.error?.message ? parsed.error.message.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]') : 'API returned error';
+              return resolve(`❌ OpenAI API Error (${res.statusCode}): ${errMsg}`);
             }
             const reply = parsed?.choices?.[0]?.message?.content;
             resolve(reply || 'No response received.');
-          } catch (e) {
-            resolve(`❌ Could not parse OpenAI response:\n${body.slice(0, 200)}`);
+          } catch {
+            resolve('❌ Could not parse response from OpenAI API.');
           }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => reject(new Error(`Network connection error: ${err.code || 'UNKNOWN'}`)));
       req.write(payload);
       req.end();
     });
@@ -179,7 +204,7 @@ class AiChatService extends EventEmitter {
 
   _sendGroq(history, modelId, apiKey) {
     if (!apiKey) {
-      return Promise.resolve('⚠️ Groq API key not set. Go to Settings → AI Configuration to add your key.\nGet an ultra-fast key at: https://console.groq.com/keys');
+      return Promise.resolve('⚠️ Groq API key not configured. Set your key in Settings → AI Configuration.');
     }
 
     return new Promise((resolve, reject) => {
@@ -213,17 +238,18 @@ class AiChatService extends EventEmitter {
           try {
             const parsed = JSON.parse(body);
             if (res.statusCode >= 400) {
-              return resolve(`❌ Groq API Error (${res.statusCode}): ${parsed?.error?.message || body.slice(0, 200)}`);
+              const errMsg = parsed?.error?.message ? parsed.error.message.replace(/[A-Za-z0-9_-]{20,}/g, '[REDACTED]') : 'API returned error';
+              return resolve(`❌ Groq API Error (${res.statusCode}): ${errMsg}`);
             }
             const reply = parsed?.choices?.[0]?.message?.content;
             resolve(reply || 'No response received.');
-          } catch (e) {
-            resolve(`❌ Could not parse Groq response:\n${body.slice(0, 200)}`);
+          } catch {
+            resolve('❌ Could not parse response from Groq API.');
           }
         });
       });
 
-      req.on('error', reject);
+      req.on('error', (err) => reject(new Error(`Network connection error: ${err.code || 'UNKNOWN'}`)));
       req.write(payload);
       req.end();
     });
@@ -235,4 +261,4 @@ class AiChatService extends EventEmitter {
   }
 }
 
-module.exports = { AiChatService, AvailableModels };
+module.exports = { AiChatService, AvailableModels, ALLOWED_PROVIDERS };

@@ -660,13 +660,19 @@ function initSettings() {
   });
 
   saveBtn?.addEventListener('click', async () => {
-    const geminiApiKey = document.getElementById('cfgGeminiKey')?.value;
-    const openAiApiKey = document.getElementById('cfgOpenAiKey')?.value;
-    const groqApiKey = document.getElementById('cfgGroqKey')?.value;
+    const geminiInput = document.getElementById('cfgGeminiKey');
+    const openAiInput = document.getElementById('cfgOpenAiKey');
+    const groqInput = document.getElementById('cfgGroqKey');
 
-    await window.flux.config.saveSettings({ geminiApiKey, openAiApiKey, groqApiKey });
+    const toSave = {};
+    if (geminiInput?.value.trim()) toSave.geminiApiKey = geminiInput.value.trim();
+    if (openAiInput?.value.trim()) toSave.openAiApiKey = openAiInput.value.trim();
+    if (groqInput?.value.trim()) toSave.groqApiKey = groqInput.value.trim();
+
+    await window.flux.config.saveSettings(toSave);
     saveBtn.textContent = 'Saved to Keychain!';
     setTimeout(() => { saveBtn.textContent = 'Save Preferences'; }, 1500);
+    await loadInitialState();
   });
 }
 
@@ -722,9 +728,22 @@ async function loadInitialState() {
   const settings = await window.flux.config.getSettings();
   if (settings) {
     applyTheme(settings.theme || 'Dark');
-    if (document.getElementById('cfgGeminiKey')) document.getElementById('cfgGeminiKey').value = settings.geminiApiKey || '';
-    if (document.getElementById('cfgOpenAiKey')) document.getElementById('cfgOpenAiKey').value = settings.openAiApiKey || '';
-    if (document.getElementById('cfgGroqKey')) document.getElementById('cfgGroqKey').value = settings.groqApiKey || '';
+    const geminiInput = document.getElementById('cfgGeminiKey');
+    const openAiInput = document.getElementById('cfgOpenAiKey');
+    const groqInput = document.getElementById('cfgGroqKey');
+
+    if (geminiInput) {
+      geminiInput.value = '';
+      geminiInput.placeholder = settings.ai?.geminiConfigured ? '•••••••••••••••• (Configured in Keychain)' : 'Enter Gemini API Key...';
+    }
+    if (openAiInput) {
+      openAiInput.value = '';
+      openAiInput.placeholder = settings.ai?.openAiConfigured ? '•••••••••••••••• (Configured in Keychain)' : 'Enter OpenAI API Key...';
+    }
+    if (groqInput) {
+      groqInput.value = '';
+      groqInput.placeholder = settings.ai?.groqConfigured ? '•••••••••••••••• (Configured in Keychain)' : 'Enter Groq API Key...';
+    }
   }
 
   // Load Session State
