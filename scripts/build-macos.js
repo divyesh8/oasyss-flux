@@ -199,6 +199,18 @@ async function build() {
         outAppPath: universalOut,
         force: true
       });
+
+      // Ensure app icon is present in Resources
+      const resDir = path.join(universalOut, 'Contents', 'Resources');
+      if (fs.existsSync(resDir)) {
+        if (!fs.existsSync(path.join(resDir, 'app.icns'))) {
+          fs.copyFileSync(iconPath, path.join(resDir, 'app.icns'));
+        }
+        if (!fs.existsSync(path.join(resDir, 'AppIcon.icns'))) {
+          fs.copyFileSync(iconPath, path.join(resDir, 'AppIcon.icns'));
+        }
+      }
+
       log(`✓ Universal macOS Application assembled at: ${universalOut}`);
     } catch (err) {
       error(`Universal assembly failed: ${err.message}`);

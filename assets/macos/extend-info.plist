@@ -18,6 +18,8 @@
     <string>Oasyss Flux requires screen capture audit access to verify display capture exclusion during security assessments.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Oasyss Flux requires system event access for global panic hotkeys and window state monitoring.</string>
+    <key>CFBundleIconFile</key>
+    <string>app.icns</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSRequiresAquaSystemAppearance</key>

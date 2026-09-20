@@ -170,7 +170,8 @@ async function runArtifactVerification() {
   const iconCandidates = [
     path.join(appPath, 'Contents', 'Resources', 'app.icns'),
     path.join(appPath, 'Contents', 'Resources', 'AppIcon.icns'),
-    path.join(appPath, 'Contents', 'Resources', `${APP_NAME}.icns`)
+    path.join(appPath, 'Contents', 'Resources', `${APP_NAME}.icns`),
+    path.join(appPath, 'Contents', 'Resources', 'electron.icns')
   ];
   const iconPath = iconCandidates.find(c => fs.existsSync(c));
   if (iconPath) {
