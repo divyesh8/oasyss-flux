@@ -87,14 +87,83 @@ contextBridge.exposeInMainWorld('flux', {
     goForward: () => ipcRenderer.invoke('browser:forward'),
     reload: () => ipcRenderer.invoke('browser:reload'),
     toggleMute: () => ipcRenderer.invoke('browser:toggle-mute'),
-    getMuteState: () => ipcRenderer.invoke('browser:mute-state')
+    getMuteState: () => ipcRenderer.invoke('browser:mute-state'),
+    setBounds: (bounds) => ipcRenderer.invoke('browser:set-bounds', bounds || {}),
+    setVisible: (visible) => ipcRenderer.invoke('browser:set-visible', !!visible),
+    newTab: (url) => ipcRenderer.invoke('browser:new-tab', typeof url === 'string' ? url : ''),
+    switchTab: (tabId) => ipcRenderer.invoke('browser:switch-tab', tabId),
+    closeTab: (tabId) => ipcRenderer.invoke('browser:close-tab', tabId),
+    reloadAfterCrash: () => ipcRenderer.invoke('browser:reload-after-crash'),
+    canGoBack: (tabId) => ipcRenderer.invoke('browser:can-go-back', tabId),
+    canGoForward: (tabId) => ipcRenderer.invoke('browser:can-go-forward', tabId),
+    zoomIn: (tabId) => ipcRenderer.invoke('browser:zoom-in', tabId),
+    zoomOut: (tabId) => ipcRenderer.invoke('browser:zoom-out', tabId),
+    zoomReset: (tabId) => ipcRenderer.invoke('browser:zoom-reset', tabId),
+    getZoom: (tabId) => ipcRenderer.invoke('browser:get-zoom', tabId),
+    onLoadingState: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:loading-state', handler);
+      return () => ipcRenderer.removeListener('browser:loading-state', handler);
+    },
+    onNavigationState: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:navigation-state', handler);
+      return () => ipcRenderer.removeListener('browser:navigation-state', handler);
+    },
+    onNavigated: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:navigated', handler);
+      return () => ipcRenderer.removeListener('browser:navigated', handler);
+    },
+    onTitleUpdated: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:title-updated', handler);
+      return () => ipcRenderer.removeListener('browser:title-updated', handler);
+    },
+    onCrashed: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:crashed', handler);
+      return () => ipcRenderer.removeListener('browser:crashed', handler);
+    },
+    onExternalTabCreated: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('browser:tab-created-externally', handler);
+      return () => ipcRenderer.removeListener('browser:tab-created-externally', handler);
+    }
+  },
+
+  // Safe Browser API
+  safeBrowser: {
+    getPolicy: () => ipcRenderer.invoke('safebrowser:policy-get'),
+    setPolicy: (policy) => ipcRenderer.invoke('safebrowser:policy-update', policy || {}),
+    isAllowedUrl: (url) => ipcRenderer.invoke('safebrowser:is-allowed', typeof url === 'string' ? url : ''),
+    switchMode: (mode) => ipcRenderer.invoke('app:switch-mode', mode),
+    getMode: () => ipcRenderer.invoke('app:get-mode'),
+    onModeChanged: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('app:mode-changed', handler);
+      return () => ipcRenderer.removeListener('app:mode-changed', handler);
+    },
+    onBlockedNavigation: (callback) => {
+      const handler = (_event, data) => callback(data);
+      ipcRenderer.on('safebrowser:blocked-navigation', handler);
+      return () => ipcRenderer.removeListener('safebrowser:blocked-navigation', handler);
+    }
   },
 
   // Window Controls
   window: {
     close: () => ipcRenderer.send('window:close'),
     minimize: () => ipcRenderer.send('window:minimize'),
-    zoom: () => ipcRenderer.send('window:zoom')
+    zoom: () => ipcRenderer.send('window:zoom'),
+    toggleFullscreen: () => ipcRenderer.invoke('window:toggle-fullscreen'),
+    isFullScreen: () => ipcRenderer.invoke('window:is-fullscreen'),
+    isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+    onFullscreenChanged: (callback) => {
+      const handler = (_event, isFs) => callback(isFs);
+      ipcRenderer.on('window:fullscreen-changed', handler);
+      return () => ipcRenderer.removeListener('window:fullscreen-changed', handler);
+    }
   },
 
   // App Events from macOS Menu

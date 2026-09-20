@@ -10,6 +10,13 @@
     <AssemblyName>Oasyss Flux</AssemblyName>
   </PropertyGroup>
 
+  <Target Name="CopyPublishedToRoot" AfterTargets="Publish">
+    <ItemGroup>
+      <PublishOutputFiles Include="$(PublishDir)**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PublishOutputFiles)" DestinationFolder="$(MSBuildProjectDirectory)\Release\%(RecursiveDir)" />
+  </Target>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
     <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
@@ -51,6 +58,12 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="chrome.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="chrome.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

@@ -366,6 +366,142 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Chrome Browser Mode Window Controls -->
+        <Style x:Key="ChromeWindowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#3C4043"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#5F6368"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChromeWindowCloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="btnBorder" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#E81123"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="btnBorder" Property="Background" Value="#BF0F1D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChromeGeminiButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#2B2D30"/>
+            <Setter Property="BorderBrush" Value="#444746"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="14"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#383A3E"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#5E6166"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#45474D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChromeTabstripButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#9AA0A6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#35363A"/>
+                                <Setter Property="Foreground" Value="#E8EAED"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#444746"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChromeNavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#9AA0A6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#35363A"/>
+                                <Setter Property="Foreground" Value="#E8EAED"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#444746"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="MainOverlayBorder" Padding="15" Background="{DynamicResource Theme.AppBackground}" CornerRadius="8" BorderBrush="{DynamicResource Theme.AppBorder}" BorderThickness="1">
@@ -383,14 +519,15 @@
                         <Setter.Value>
                             <ControlTemplate TargetType="{x:Type TabItem}">
                                 <Grid x:Name="templateRoot"
-                                      Height="32"
-                                      Margin="0,0,4,0"
-                                      Width="105"
+                                      Height="34"
+                                      Margin="0,0,2,0"
+                                      MinWidth="120"
+                                      MaxWidth="240"
                                       ClipToBounds="True">
 
                                     <Border x:Name="DropSeparator"
                                             Width="2"
-                                            Background="#D6FF3F"
+                                            Background="#8AB4F8"
                                             HorizontalAlignment="Left"
                                             Margin="0,5,0,5"
                                             CornerRadius="1"
@@ -398,25 +535,24 @@
                                             Opacity="1.0" />
 
                                     <Border x:Name="tabBorder"
-                                            Background="{DynamicResource Theme.Surface}" 
-                                            BorderBrush="{DynamicResource Theme.Border}"
-                                            BorderThickness="1"
-                                            CornerRadius="6">
+                                            Background="Transparent" 
+                                            BorderBrush="Transparent"
+                                            BorderThickness="0"
+                                            CornerRadius="8,8,0,0">
                                     </Border>
 
-                                   
                                     <ContentPresenter x:Name="contentPresenter"
                                                       ContentSource="Header"
                                                       HorizontalAlignment="Stretch"
                                                       VerticalAlignment="Center"
-                                                      Margin="8,0,10,0"/>
+                                                      Margin="10,0,10,0"/>
                                 </Grid>
                                 <ControlTemplate.Triggers>
 
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource Theme.TabSelectedBg}"/>
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="{DynamicResource Theme.TabSelectedBorder}"/>
-                                        <Setter TargetName="templateRoot" Property="Width" Value="135"/>
+                                        <Setter TargetName="tabBorder" Property="BorderThickness" Value="0"/>
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="Transparent"/>
                                     </Trigger>
     
                                     <Trigger Property="IsMouseOver" Value="True">
@@ -429,12 +565,14 @@
                                              <Condition Property="IsMouseOver" Value="True"/>
                                         </MultiTrigger.Conditions>
                                         <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource Theme.TabSelectedBg}"/>
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#D6FF3F"/>
+                                        <Setter TargetName="tabBorder" Property="BorderThickness" Value="0"/>
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="Transparent"/>
                                     </MultiTrigger>
 
                                     <DataTrigger Binding="{Binding IsDragOver, RelativeSource={RelativeSource Self}}" Value="True">
                                         <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource Theme.SurfaceHover}" />
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#D6FF3F" />
+                                        <Setter TargetName="tabBorder" Property="BorderThickness" Value="1"/>
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#8AB4F8" />
                                     </DataTrigger>
 
                                     <DataTrigger Binding="{Binding IsTabDragging, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
@@ -457,7 +595,7 @@
                         </Grid.RowDefinitions>
 
                         <!-- ROW 0: TOP WINDOW CHROME -->
-                        <Border Grid.Row="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,0,0,1" Padding="8,4" Margin="0,0,0,6">
+                        <Border x:Name="FluxTopBar" Grid.Row="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,0,0,1" Padding="8,4" Margin="0,0,0,6">
                             <DockPanel LastChildFill="True">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock x:Name="MuteStatusTextBlock"
@@ -477,6 +615,12 @@
                                                    Margin="5,0,0,0"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
+                                    <Button x:Name="TopModeToggleButton" Margin="0,0,8,0" Style="{StaticResource ModernButtonStyle}" Padding="8,2" Height="26" ToolTip="Toggle Full Browser Mode (Shift+B)">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock x:Name="TopModeIcon" Text="🌐" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <TextBlock x:Name="TopModeText" Text="BROWSER" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextPrimary}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button x:Name="MuteButtonInTemplate" Margin="0,0,5,0" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26">
                                         <Image Source="./muted.png" Height="14" />
                                     </Button>
@@ -505,13 +649,13 @@
                         <!-- ROW 1: WORKSPACE WITH SIDEBAR -->
                         <Grid Grid.Row="1">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="175"/>
+                                <ColumnDefinition x:Name="SidebarColumn" Width="175"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- COLUMN 0: NARROW SIDEBAR -->
-                            <Border Grid.Column="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="6,8" Margin="0,0,6,0">
+                            <Border x:Name="SidebarBorder" Grid.Column="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="6,8" Margin="0,0,6,0">
                                 <Grid>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
@@ -526,6 +670,12 @@
 
                                     <!-- Navigation Links -->
                                     <StackPanel Grid.Row="1">
+                                        <Button x:Name="BtnSidebarToggleBrowserMode" Style="{StaticResource ModernButtonStyle}" Margin="0,0,0,8" Padding="6,4" ToolTip="Toggle Full Browser Mode (Shift+B)">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock x:Name="SidebarBrowserModeIcon" Text="🌐" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="SidebarBrowserModeText" Text="BROWSER MODE" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextPrimary}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                         <Button x:Name="BtnNavOverview" Content="OVERVIEW" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
                                         <Button x:Name="BtnNavSessions" Content="SESSIONS" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
                                         <Button x:Name="BtnNavAnalysis" Content="ANALYSIS" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
@@ -667,8 +817,31 @@
 
                                     <!-- Tabs Row -->
                                     <DockPanel Grid.Row="0" Margin="0,0,0,4">
-                                        <Button x:Name="NewTabButton" DockPanel.Dock="Right" Margin="4,0,0,0" BorderThickness="0" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26">
-                                            <Image Source="./plus.png" Width="14" Height="14" />
+                                        <!-- Chrome Top Window Controls (Visible ONLY in Browser Mode) -->
+                                        <StackPanel x:Name="ChromeTopControls" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0">
+                                            <!-- Ask Gemini Pill Button -->
+                                            <Button x:Name="BtnAskGemini" Style="{StaticResource ChromeGeminiButtonStyle}" Margin="0,0,10,0" ToolTip="Ask Gemini (AI Mode Tab)">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="✨" Margin="0,0,6,0" FontSize="12" Foreground="#4285F4"/>
+                                                    <TextBlock Text="Ask Gemini" FontSize="11" FontWeight="Medium" Foreground="#E8EAED"/>
+                                                </StackPanel>
+                                            </Button>
+                                            <!-- Chrome Minimize Button -->
+                                            <Button x:Name="ChromeMinimizeBtn" Style="{StaticResource ChromeWindowButtonStyle}" ToolTip="Minimize" Width="38" Height="30">
+                                                <TextBlock Text="&#x2014;" FontSize="11" Foreground="#9AA0A6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Button>
+                                            <!-- Chrome FullScreen / Maximize Button (ONLY in Browser Mode!) -->
+                                            <Button x:Name="ChromeMaximizeBtn" Style="{StaticResource ChromeWindowButtonStyle}" ToolTip="Full Screen / Maximize" Width="38" Height="30">
+                                                <TextBlock x:Name="ChromeMaximizeIcon" Text="&#x25A2;" FontSize="13" Foreground="#9AA0A6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Button>
+                                            <!-- Chrome Close Button -->
+                                            <Button x:Name="ChromeCloseBtn" Style="{StaticResource ChromeWindowCloseButtonStyle}" ToolTip="Close" Width="40" Height="30">
+                                                <TextBlock Text="&#x2715;" FontSize="11" Foreground="#9AA0A6" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Button>
+                                        </StackPanel>
+
+                                        <Button x:Name="NewTabButton" DockPanel.Dock="Right" Margin="4,0,0,0" Style="{StaticResource ChromeTabstripButtonStyle}" ToolTip="New Tab (Ctrl+T)">
+                                            <TextBlock Text="+" FontSize="16" Foreground="#9AA0A6" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-2,0,0"/>
                                         </Button>
                                         <TabPanel x:Name="HeaderPanel" 
                                                   IsItemsHost="true" 
@@ -681,11 +854,15 @@
 
                                     <!-- Navigation Row -->
                                     <DockPanel Grid.Row="1" Margin="0,0,0,6">
-                                        <Button x:Name="BackButton" Content="&lt;" Style="{StaticResource ModernButtonStyle}" Width="28" Height="28" Margin="0,0,2,0"/>
-                                        <Button x:Name="ForwardButton" Content="&gt;" Style="{StaticResource ModernButtonStyle}" Width="28" Height="28" Margin="0,0,4,0"/>
-                                        <Grid Width="28" Height="28" Margin="0,0,4,0">
-                                            <Button x:Name="RefreshButton" Style="{StaticResource ModernButtonStyle}" Height="Auto">
-                                                <Image Source="./refresh.png" Height="18" VerticalAlignment="Center" />
+                                        <Button x:Name="BackButton" Style="{StaticResource ChromeNavButtonStyle}" Margin="0,0,2,0" ToolTip="Click to go back">
+                                            <TextBlock Text="&#x2190;" FontSize="13" Foreground="#9AA0A6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <Button x:Name="ForwardButton" Style="{StaticResource ChromeNavButtonStyle}" Margin="0,0,4,0" ToolTip="Click to go forward">
+                                            <TextBlock Text="&#x2192;" FontSize="13" Foreground="#9AA0A6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Button>
+                                        <Grid Width="28" Height="28" Margin="0,0,6,0">
+                                            <Button x:Name="RefreshButton" Style="{StaticResource ChromeNavButtonStyle}" ToolTip="Reload this page">
+                                                <TextBlock Text="&#x21BB;" FontSize="15" Foreground="#9AA0A6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                             <Image x:Name="LoadingSpinner" Source="./loading.png"
                                                    Style="{StaticResource LoadingSpinnerStyle}"
@@ -694,44 +871,49 @@
                                                    Visibility="Collapsed"
                                                    Height="18"/>
                                         </Grid>
-                                        <Grid>
-                                            <TextBox x:Name="AddressBar"
-                                                     VerticalContentAlignment="Center"
-                                                     Padding="6,0"
-                                                     Background="{DynamicResource Theme.Surface}"
-                                                     Foreground="{DynamicResource Theme.TextPrimary}"
-                                                     BorderBrush="{DynamicResource Theme.Border}"
-                                                     BorderThickness="1"
-                                                     Height="28"
-                                                     FontSize="12"/>
-                                            <TextBlock Text="Search Google or type a URL"
-                                                       Foreground="{DynamicResource Theme.TextMuted}"
-                                                       IsHitTestVisible="False"
-                                                       VerticalAlignment="Center"
-                                                       Margin="8,0,0,0"
-                                                       FontSize="11">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Text, ElementName=AddressBar}" Value="">
-                                                                <Setter Property="Visibility" Value="Visible"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Grid>
+                                        <Border Background="#202124" BorderBrush="#3C4043" BorderThickness="1" CornerRadius="14" Height="30">
+                                            <Grid>
+                                                <TextBox x:Name="AddressBar"
+                                                         VerticalContentAlignment="Center"
+                                                         Padding="28,0,10,0"
+                                                         Background="Transparent"
+                                                         Foreground="#E8EAED"
+                                                         BorderThickness="0"
+                                                         CaretBrush="#8AB4F8"
+                                                         Height="28"
+                                                         FontSize="12"/>
+                                                <TextBlock Text="🔍"
+                                                           Foreground="#9AA0A6"
+                                                           IsHitTestVisible="False"
+                                                           VerticalAlignment="Center"
+                                                           Margin="9,0,0,0"
+                                                           FontSize="11"/>
+                                                <TextBlock Text="Search Google or type a URL"
+                                                           Foreground="#9AA0A6"
+                                                           IsHitTestVisible="False"
+                                                           VerticalAlignment="Center"
+                                                           Margin="28,0,0,0"
+                                                           FontSize="11">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Text, ElementName=AddressBar}" Value="">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </Grid>
+                                        </Border>
                                     </DockPanel>
 
                                     <!-- Toolbar Row -->
-                                    <Border Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6" Padding="4">
+                                    <Border x:Name="BrowserToolbarBorder" Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6" Padding="4">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -757,50 +939,53 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
                                             </ScrollViewer>
-                                            <Button Grid.Column="1" 
-                                                    x:Name="AddBookmarkButton" 
-                                                    Width="26" 
-                                                    Height="26" 
-                                                    Style="{StaticResource ModernButtonStyle}"
-                                                    Click="AddBookmarkButton_Click">
-                                                <Image Source="./plus.png" Height="16"/>
-                                            </Button>
 
-                                            <!-- AI Chat Toggle Button -->
-                                            <Button Grid.Column="2" x:Name="AiChatButton" Style="{StaticResource ModernButtonStyle}" Width="28" Height="26" Margin="4,0,0,0" ToolTip="Open AI Chat">
-                                                <TextBlock Text="AI" FontSize="10" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                            </Button>
-
-                                            <!-- Transparency Toggle Button + Slider Popup -->
-                                            <StackPanel Grid.Column="3" Orientation="Vertical" Margin="4,0,0,0">
-                                                <Button x:Name="TransparencyButton" Style="{StaticResource ModernButtonStyle}" Width="32" Height="26" ToolTip="Toggle Transparency (Shift+T / Shift+Alt+T)">
-                                                    <TextBlock Text="CLR" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            <!-- Cyber Tools (Flux Mode Only) -->
+                                            <StackPanel x:Name="CyberToolbarTools" Grid.Column="1" Orientation="Horizontal">
+                                                <Button x:Name="AddBookmarkButton" 
+                                                        Width="26" 
+                                                        Height="26" 
+                                                        Style="{StaticResource ModernButtonStyle}"
+                                                        Click="AddBookmarkButton_Click">
+                                                    <Image Source="./plus.png" Height="16"/>
                                                 </Button>
-                                                <Border x:Name="TransparencySliderPopup" 
-                                                        Visibility="Collapsed" 
-                                                        Background="{DynamicResource Theme.Surface}" 
-                                                        BorderBrush="{DynamicResource Theme.Border}" 
-                                                        BorderThickness="1" 
-                                                        CornerRadius="4" 
-                                                        Padding="5" 
-                                                        Margin="0,2,0,0">
-                                                    <StackPanel>
-                                                        <TextBlock Text="Opacity" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" HorizontalAlignment="Center"/>
-                                                        <Slider x:Name="TransparencySliderControl" 
-                                                                Minimum="0.1" Maximum="1.0" Value="0.5" 
-                                                                Width="80" 
-                                                                Margin="0,3,0,0"/>
-                                                        <Button x:Name="GhostModeButton" Content="Ghost (100%)" 
-                                                                Style="{StaticResource DialogButtonStyle}" 
-                                                                FontSize="9" Padding="4,2" Margin="0,4,0,0" 
-                                                                ToolTip="Make completely transparent &amp; click-through (Shift+T / Shift+Alt+T)"/>
-                                                    </StackPanel>
-                                                </Border>
-                                            </StackPanel>
 
-                                            <Button Grid.Column="4" x:Name="SettingsButton" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26" Margin="4,0,0,0" Click="SettingsButton_Click">
-                                                <Image Source="./settings.png" Height="16" VerticalAlignment="Center"/>
-                                            </Button>
+                                                <!-- AI Chat Toggle Button -->
+                                                <Button x:Name="AiChatButton" Style="{StaticResource ModernButtonStyle}" Width="28" Height="26" Margin="4,0,0,0" ToolTip="Open AI Chat">
+                                                    <TextBlock Text="AI" FontSize="10" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </Button>
+
+                                                <!-- Transparency Toggle Button + Slider Popup -->
+                                                <StackPanel Orientation="Vertical" Margin="4,0,0,0">
+                                                    <Button x:Name="TransparencyButton" Style="{StaticResource ModernButtonStyle}" Width="32" Height="26" ToolTip="Toggle Transparency (Shift+T / Shift+Alt+T)">
+                                                        <TextBlock Text="CLR" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </Button>
+                                                    <Border x:Name="TransparencySliderPopup" 
+                                                            Visibility="Collapsed" 
+                                                            Background="{DynamicResource Theme.Surface}" 
+                                                            BorderBrush="{DynamicResource Theme.Border}" 
+                                                            BorderThickness="1" 
+                                                            CornerRadius="4" 
+                                                            Padding="5" 
+                                                            Margin="0,2,0,0">
+                                                        <StackPanel>
+                                                            <TextBlock Text="Opacity" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" HorizontalAlignment="Center"/>
+                                                            <Slider x:Name="TransparencySliderControl" 
+                                                                    Minimum="0.1" Maximum="1.0" Value="0.5" 
+                                                                    Width="80" 
+                                                                    Margin="0,3,0,0"/>
+                                                            <Button x:Name="GhostModeButton" Content="Ghost (100%)" 
+                                                                    Style="{StaticResource DialogButtonStyle}" 
+                                                                    FontSize="9" Padding="4,2" Margin="0,4,0,0" 
+                                                                    ToolTip="Make completely transparent &amp; click-through (Shift+T / Shift+Alt+T)"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
+
+                                                <Button x:Name="SettingsButton" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26" Margin="4,0,0,0" Click="SettingsButton_Click">
+                                                    <Image Source="./settings.png" Height="16" VerticalAlignment="Center"/>
+                                                </Button>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
 
@@ -1073,7 +1258,7 @@
                         </Grid>
 
                         <!-- ROW 2: STATUS BAR -->
-                        <Border Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="8,3" Margin="0,6,0,0">
+                        <Border x:Name="FluxBottomBar" Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="8,3" Margin="0,6,0,0">
                             <DockPanel LastChildFill="True">
                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                                     <TextBlock Text="IPC: 127.0.0.1:49152" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Margin="0,0,10,0"/>

@@ -101,6 +101,38 @@ namespace MyOverlayPOC
             return success;
         }
 
+        private static readonly System.Collections.Generic.HashSet<IntPtr> _excludedFromAffinityHwnds = new();
+
+        /// <summary>
+        /// Marks an HWND as visible to screen capture / display (sets WDA_NONE) and prevents automatic re-application.
+        /// </summary>
+        public static bool MarkVisibleToCapture(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero)
+                return false;
+
+            lock (_excludedFromAffinityHwnds)
+            {
+                _excludedFromAffinityHwnds.Add(hwnd);
+            }
+            return SetWindowDisplayAffinity(hwnd, WDA_NONE);
+        }
+
+        /// <summary>
+        /// Unmarks an HWND so that capture exclusion is re-applied (sets WDA_EXCLUDEFROMCAPTURE).
+        /// </summary>
+        public static bool UnmarkVisibleToCapture(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero)
+                return false;
+
+            lock (_excludedFromAffinityHwnds)
+            {
+                _excludedFromAffinityHwnds.Remove(hwnd);
+            }
+            return ApplyCaptureAffinity(hwnd);
+        }
+
         /// <summary>
         /// Registers a WinEvent hook for the current process to intercept window and popup show events,
         /// ensuring that dynamically created popup HWNDs (tooltips, context menus, combo boxes)
@@ -146,6 +178,12 @@ namespace MyOverlayPOC
             {
                 try
                 {
+                    lock (_excludedFromAffinityHwnds)
+                    {
+                        if (_excludedFromAffinityHwnds.Contains(hwnd))
+                            return;
+                    }
+
                     if (IsWindow(hwnd))
                     {
                         ApplyCaptureAffinity(hwnd);
@@ -165,6 +203,12 @@ namespace MyOverlayPOC
         {
             if (hwnd == IntPtr.Zero)
                 return;
+
+            lock (_excludedFromAffinityHwnds)
+            {
+                if (_excludedFromAffinityHwnds.Contains(hwnd))
+                    return;
+            }
 
             uint targetAffinity = IsExcludeFromCaptureSupported ? WDA_EXCLUDEFROMCAPTURE : WDA_MONITOR;
 

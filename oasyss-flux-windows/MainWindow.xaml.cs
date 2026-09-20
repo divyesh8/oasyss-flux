@@ -240,13 +240,15 @@ public class AppSettings
 
     public partial class MainWindow : Window
     {
+        public static MainWindow? Instance { get; private set; }
         private Border _webViewPlaceholder;
-        private const int GWL_EXSTYLE = -20;
+        internal const int GWL_EXSTYLE = -20;
         private Border _webViewContentOverlay;
 private readonly Dictionary<string, HashSet<CoreWebView2PermissionKind>> _grantedPermissions = new Dictionary<string, HashSet<CoreWebView2PermissionKind>>();
         private const int WS_EX_LAYERED = 0x00080000;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
-        private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_APPWINDOW = 0x00040000;
+        internal const int WS_EX_TRANSPARENT = 0x00000020;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
 private System.Windows.Point _dragStartPoint;
@@ -302,6 +304,29 @@ private bool _shiftPressed;
 private bool _altPressed;
 private bool _winPressed;
 private readonly HashSet<uint> _swallowedKeys = new HashSet<uint>();
+private System.Windows.Controls.Button? _btnNavSessions;
+private bool _isBrowserMode = false;
+private ColumnDefinition? _sidebarColumn;
+private FrameworkElement? _sidebarBorder;
+private System.Windows.Controls.Button? _btnToggleBrowserMode;
+private System.Windows.Controls.Button? _topModeToggleButton;
+private TextBlock? _browserModeText;
+private TextBlock? _browserModeIcon;
+private TextBlock? _topModeText;
+private TextBlock? _topModeIcon;
+private Border? _fluxTopBar;
+private Border? _fluxBottomBar;
+private StackPanel? _chromeTopControls;
+private System.Windows.Controls.Button? _btnAskGemini;
+private System.Windows.Controls.Button? _chromeMinimizeBtn;
+private System.Windows.Controls.Button? _chromeMaximizeBtn;
+private TextBlock? _chromeMaximizeIcon;
+private System.Windows.Controls.Button? _chromeCloseBtn;
+private Border? _browserToolbarBorder;
+private StackPanel? _cyberToolbarTools;
+private AiChatWindow? _aiChatWindow;
+private bool _isBrowserFullScreen = false;
+private Rect _preFullScreenBounds;
 
         private readonly string _screenshotsTempFolder;
         public ObservableCollection<Screenshot> Screenshots { get; set; }
@@ -389,10 +414,10 @@ private bool _minimizeOnFocusLoss = true;
         [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
         private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
 
-        private static long GetWindowLongPtrSafe(IntPtr hWnd, int nIndex)
+        internal static long GetWindowLongPtrSafe(IntPtr hWnd, int nIndex)
             => IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex).ToInt64() : GetWindowLong32(hWnd, nIndex);
 
-        private static void SetWindowLongPtrSafe(IntPtr hWnd, int nIndex, long dwNewLong)
+        internal static void SetWindowLongPtrSafe(IntPtr hWnd, int nIndex, long dwNewLong)
         {
             if (IntPtr.Size == 8) SetWindowLongPtr64(hWnd, nIndex, new IntPtr(dwNewLong));
             else SetWindowLong32(hWnd, nIndex, (int)dwNewLong);
@@ -424,9 +449,20 @@ private bool _minimizeOnFocusLoss = true;
         private const uint GW_OWNER = 4;
         private DispatcherTimer _dialogProtectionTimer;
 
+        private const int WM_SETICON = 0x0080;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        private ImageSource? _defaultAppIcon;
+        private ImageSource? _chromeAppIcon;
+
         public MainWindow()
         {
             InitializeComponent();
+            InitApplicationIcons();
 
             var originalContent = this.Content as UIElement;
             var newRootGrid = new Grid();
@@ -455,6 +491,7 @@ private bool _minimizeOnFocusLoss = true;
             this.Width = this.Height * 1.38;
 
             this.Topmost = true;
+            Instance = this;
             DisplayAffinityManager.InitializePopupAffinityHandler();
             this.SourceInitialized += MainWindow_SourceInitialized;
             this.Closed += MainWindow_Closed;
@@ -629,6 +666,29 @@ private void ToggleProgrammaticMinimize()
             return null;
         }
 
+        private static BitmapImage? LoadAppImage(string relativePath)
+        {
+            try
+            {
+                string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relativePath);
+                if (File.Exists(fullPath))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(fullPath, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+                return new BitmapImage(new Uri(relativePath, UriKind.RelativeOrAbsolute));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
 
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -738,6 +798,7 @@ private void ToggleProgrammaticMinimize()
 
             var btnNavOverview = template.FindName("BtnNavOverview", BrowserTabs) as System.Windows.Controls.Button;
             var btnNavSessions = template.FindName("BtnNavSessions", BrowserTabs) as System.Windows.Controls.Button;
+            _btnNavSessions = btnNavSessions;
             var btnNavAnalysis = template.FindName("BtnNavAnalysis", BrowserTabs) as System.Windows.Controls.Button;
             var btnNavMonitor = template.FindName("BtnNavMonitor", BrowserTabs) as System.Windows.Controls.Button;
             var btnNavProfiles = template.FindName("BtnNavProfiles", BrowserTabs) as System.Windows.Controls.Button;
@@ -805,8 +866,360 @@ private void ToggleProgrammaticMinimize()
                 };
             }
 
+            // Retrieve Browser Mode toggle elements
+            _sidebarColumn = template.FindName("SidebarColumn", BrowserTabs) as ColumnDefinition;
+            _sidebarBorder = template.FindName("SidebarBorder", BrowserTabs) as FrameworkElement;
+            _btnToggleBrowserMode = template.FindName("BtnToggleBrowserMode", BrowserTabs) as System.Windows.Controls.Button;
+            _topModeToggleButton = template.FindName("TopModeToggleButton", BrowserTabs) as System.Windows.Controls.Button;
+            _browserModeText = template.FindName("BrowserModeText", BrowserTabs) as TextBlock;
+            _browserModeIcon = template.FindName("BrowserModeIcon", BrowserTabs) as TextBlock;
+            _topModeText = template.FindName("TopModeText", BrowserTabs) as TextBlock;
+            _topModeIcon = template.FindName("TopModeIcon", BrowserTabs) as TextBlock;
+
+            // Chrome Top Controls & Window Buttons (Browser Mode)
+            _fluxTopBar = template.FindName("FluxTopBar", BrowserTabs) as Border;
+            _fluxBottomBar = template.FindName("FluxBottomBar", BrowserTabs) as Border;
+            _chromeTopControls = template.FindName("ChromeTopControls", BrowserTabs) as StackPanel;
+            _btnAskGemini = template.FindName("BtnAskGemini", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMinimizeBtn = template.FindName("ChromeMinimizeBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMaximizeBtn = template.FindName("ChromeMaximizeBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMaximizeIcon = template.FindName("ChromeMaximizeIcon", BrowserTabs) as TextBlock;
+            _chromeCloseBtn = template.FindName("ChromeCloseBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _browserToolbarBorder = template.FindName("BrowserToolbarBorder", BrowserTabs) as Border;
+            _cyberToolbarTools = template.FindName("CyberToolbarTools", BrowserTabs) as StackPanel;
+
+            if (_btnToggleBrowserMode != null)
+            {
+                _btnToggleBrowserMode.Click += (s, ev) => ToggleBrowserMode();
+            }
+            if (_topModeToggleButton != null)
+            {
+                _topModeToggleButton.Click += (s, ev) => ToggleBrowserMode();
+            }
+            var btnSidebarToggle = template.FindName("BtnSidebarToggleBrowserMode", BrowserTabs) as System.Windows.Controls.Button;
+            if (btnSidebarToggle != null)
+            {
+                btnSidebarToggle.Click += (s, ev) => ToggleBrowserMode();
+            }
+            if (_btnAskGemini != null)
+            {
+                _btnAskGemini.Click += (s, ev) => OpenAiChatTab();
+            }
+            if (_chromeMinimizeBtn != null)
+            {
+                _chromeMinimizeBtn.Click += MinimizeButton_Click;
+            }
+            if (_chromeMaximizeBtn != null)
+            {
+                _chromeMaximizeBtn.Click += (s, ev) => ToggleFullScreen();
+            }
+            if (_chromeCloseBtn != null)
+            {
+                _chromeCloseBtn.Click += ExitButton_Click;
+            }
+
             // Set default active panel to SESSIONS
             ShowWorkspace(panelSessions, btnNavSessions);
+        }
+
+        private void InitApplicationIcons()
+        {
+            try
+            {
+                string chromeIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "chrome.ico");
+                if (File.Exists(chromeIcoPath))
+                {
+                    _chromeAppIcon = new BitmapImage(new Uri(chromeIcoPath, UriKind.Absolute));
+                }
+                else
+                {
+                    string chromePngPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "chrome.png");
+                    if (File.Exists(chromePngPath))
+                    {
+                        _chromeAppIcon = new BitmapImage(new Uri(chromePngPath, UriKind.Absolute));
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                string appIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+                if (File.Exists(appIcoPath))
+                {
+                    _defaultAppIcon = new BitmapImage(new Uri(appIcoPath, UriKind.Absolute));
+                }
+                else
+                {
+                    string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.png");
+                    if (File.Exists(logoPath))
+                    {
+                        _defaultAppIcon = new BitmapImage(new Uri(logoPath, UriKind.Absolute));
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SetApplicationIcon(bool isChrome)
+        {
+            try
+            {
+                this.Icon = isChrome ? _chromeAppIcon : _defaultAppIcon;
+
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    string iconFile = isChrome ? "chrome.ico" : "app.ico";
+                    string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, iconFile);
+                    if (File.Exists(fullPath))
+                    {
+                        using var ico = new System.Drawing.Icon(fullPath);
+                        SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, ico.Handle);
+                        SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, ico.Handle);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting application icon: {ex.Message}");
+            }
+        }
+
+        public void ToggleBrowserMode()
+        {
+            _isBrowserMode = !_isBrowserMode;
+
+            if (_isBrowserMode)
+            {
+                // Ensure browser itself is NOT transparent in Browser Mode
+                if (_isCompletelyTransparent)
+                {
+                    ToggleCompleteTransparency();
+                }
+
+                // In Browser Mode: the browser window should be visible to display/screen capture and taskbar
+                IntPtr mainHwnd = new WindowInteropHelper(this).Handle;
+                DisplayAffinityManager.MarkVisibleToCapture(mainHwnd);
+
+                this.ShowInTaskbar = true;
+                long exStyle = GetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE);
+                SetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE, (exStyle | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW);
+                TaskbarManager.ShowInTaskbar(mainHwnd);
+                this.Title = "Google Chrome";
+                SetApplicationIcon(true);
+
+                if (_btnNavSessions != null)
+                {
+                    _btnNavSessions.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                }
+
+                if (_fluxTopBar != null) _fluxTopBar.Visibility = Visibility.Collapsed;
+                if (_fluxBottomBar != null) _fluxBottomBar.Visibility = Visibility.Collapsed;
+                if (_sidebarColumn != null) _sidebarColumn.Width = new GridLength(0);
+                if (_sidebarBorder != null) _sidebarBorder.Visibility = Visibility.Collapsed;
+
+                if (_chromeTopControls != null) _chromeTopControls.Visibility = Visibility.Visible;
+                if (_cyberToolbarTools != null) _cyberToolbarTools.Visibility = Visibility.Collapsed;
+                if (_browserToolbarBorder != null)
+                {
+                    _browserToolbarBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x35, 0x36, 0x3A));
+                    _browserToolbarBorder.Padding = new Thickness(6, 4, 6, 4);
+                }
+
+                if (_browserModeText != null) _browserModeText.Text = "FLUX MODE";
+                if (_browserModeIcon != null) _browserModeIcon.Text = "⚡";
+                if (_topModeText != null) _topModeText.Text = "FLUX";
+                if (_topModeIcon != null) _topModeIcon.Text = "⚡";
+                if (_btnToggleBrowserMode != null) _btnToggleBrowserMode.ToolTip = "Switch to Flux Dashboard (Shift+B)";
+                if (_topModeToggleButton != null) _topModeToggleButton.ToolTip = "Switch to Flux Dashboard (Shift+B)";
+
+                MainOverlayBorder.Padding = new Thickness(0);
+                MainOverlayBorder.CornerRadius = new CornerRadius(0);
+                MainOverlayBorder.BorderThickness = new Thickness(0);
+                MainOverlayBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x20, 0x21, 0x24));
+            }
+            else
+            {
+                if (_isBrowserFullScreen)
+                {
+                    ToggleFullScreen();
+                }
+
+                // In Flux Mode: the window should be invisible to display/screen capture and taskbar (like Oasyss Flux)
+                IntPtr mainHwnd = new WindowInteropHelper(this).Handle;
+                DisplayAffinityManager.UnmarkVisibleToCapture(mainHwnd);
+
+                this.ShowInTaskbar = false;
+                long exStyle = GetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE);
+                SetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE, (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+                TaskbarManager.HideFromTaskbar(mainHwnd);
+                this.Title = "";
+                SetApplicationIcon(false);
+
+                if (_aiChatWindow != null && _aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Hide();
+                }
+
+                if (_fluxTopBar != null) _fluxTopBar.Visibility = Visibility.Visible;
+                if (_fluxBottomBar != null) _fluxBottomBar.Visibility = Visibility.Visible;
+                if (_sidebarColumn != null) _sidebarColumn.Width = new GridLength(175);
+                if (_sidebarBorder != null) _sidebarBorder.Visibility = Visibility.Visible;
+
+                if (_chromeTopControls != null) _chromeTopControls.Visibility = Visibility.Collapsed;
+                if (_cyberToolbarTools != null) _cyberToolbarTools.Visibility = Visibility.Visible;
+                if (_browserToolbarBorder != null)
+                {
+                    _browserToolbarBorder.Background = (System.Windows.Media.Brush)FindResource("Theme.SurfaceAlt");
+                    _browserToolbarBorder.Padding = new Thickness(10, 4, 10, 4);
+                }
+
+                if (_browserModeText != null) _browserModeText.Text = "BROWSER";
+                if (_browserModeIcon != null) _browserModeIcon.Text = "🌐";
+                if (_topModeText != null) _topModeText.Text = "BROWSER";
+                if (_topModeIcon != null) _topModeIcon.Text = "🌐";
+                if (_btnToggleBrowserMode != null) _btnToggleBrowserMode.ToolTip = "Toggle Full Browser Mode (Shift+B)";
+                if (_topModeToggleButton != null) _topModeToggleButton.ToolTip = "Toggle Full Browser Mode (Shift+B)";
+
+                MainOverlayBorder.Padding = _originalBorderPadding;
+                MainOverlayBorder.CornerRadius = _originalBorderCornerRadius;
+                MainOverlayBorder.BorderThickness = new Thickness(1);
+                MainOverlayBorder.Background = (System.Windows.Media.Brush)FindResource("Theme.AppBackground");
+            }
+        }
+
+        private void ToggleFullScreen()
+        {
+            if (!_isBrowserFullScreen)
+            {
+                _preFullScreenBounds = new Rect(this.Left, this.Top, this.Width, this.Height);
+                var workArea = SystemParameters.WorkArea;
+                this.Left = workArea.Left;
+                this.Top = workArea.Top;
+                this.Width = workArea.Width;
+                this.Height = workArea.Height;
+                _isBrowserFullScreen = true;
+                if (_chromeMaximizeIcon != null)
+                {
+                    _chromeMaximizeIcon.Text = "\u274F";
+                }
+            }
+            else
+            {
+                if (_preFullScreenBounds.Width > 0 && _preFullScreenBounds.Height > 0)
+                {
+                    this.Left = _preFullScreenBounds.Left;
+                    this.Top = _preFullScreenBounds.Top;
+                    this.Width = _preFullScreenBounds.Width;
+                    this.Height = _preFullScreenBounds.Height;
+                }
+                else
+                {
+                    this.Width = _originalWidth;
+                    this.Height = _originalHeight;
+                }
+                _isBrowserFullScreen = false;
+                if (_chromeMaximizeIcon != null)
+                {
+                    _chromeMaximizeIcon.Text = "\u25A2";
+                }
+            }
+        }
+
+        public void OpenAiChatTab()
+        {
+            // Remove any legacy in-browser AI chat tab so it never dominates the screen
+            TabItem? legacyTab = null;
+            foreach (var item in BrowserTabs.Items)
+            {
+                if (item is TabItem t && t.Tag as string == "AiChatTab")
+                {
+                    legacyTab = t;
+                    break;
+                }
+            }
+            if (legacyTab != null)
+            {
+                BrowserTabs.Items.Remove(legacyTab);
+            }
+
+            // Open standalone, resizable companion window for Ask Gemini
+            if (_aiChatWindow == null)
+            {
+                _aiChatWindow = new AiChatWindow(_aiChatService);
+                _aiChatWindow.Owner = this;
+                _aiChatWindow.Left = Math.Max(0, this.Left + this.ActualWidth - 440);
+                _aiChatWindow.Top = Math.Max(0, this.Top + 60);
+            }
+
+            if (!_aiChatWindow.IsVisible)
+            {
+                _aiChatWindow.Show();
+            }
+            else
+            {
+                if (_aiChatWindow.WindowState == WindowState.Minimized)
+                {
+                    _aiChatWindow.WindowState = WindowState.Normal;
+                }
+                _aiChatWindow.Activate();
+            }
+
+            var aiHwnd = new WindowInteropHelper(_aiChatWindow).Handle;
+            if (aiHwnd != IntPtr.Zero)
+            {
+                DisplayAffinityManager.ApplyCaptureAffinity(aiHwnd);
+                TaskbarManager.HideFromTaskbar(aiHwnd);
+            }
+
+            _aiChatWindow.FocusInput();
+        }
+
+        public void AccessAiMode()
+        {
+            if (!_isBrowserMode)
+            {
+                ToggleBrowserMode();
+            }
+
+            if (_aiChatWindow == null)
+            {
+                OpenAiChatTab();
+            }
+            else
+            {
+                if (!_aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Show();
+                }
+                if (_aiChatWindow.IsCompletelyTransparent)
+                {
+                    _aiChatWindow.ToggleCompleteTransparency();
+                }
+                if (_aiChatWindow.WindowState == WindowState.Minimized)
+                {
+                    _aiChatWindow.WindowState = WindowState.Normal;
+                }
+                _aiChatWindow.Activate();
+                _aiChatWindow.FocusInput();
+            }
+        }
+
+        public void ToggleAiTransparency()
+        {
+            if (_aiChatWindow == null)
+            {
+                OpenAiChatTab();
+            }
+            if (_aiChatWindow != null)
+            {
+                if (!_aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Show();
+                }
+                _aiChatWindow.ToggleCompleteTransparency();
+            }
         }
 
         #region Settings Management
@@ -898,7 +1311,7 @@ private void LoadSettings()
 }
 
 
-private void SaveSettings()
+public void SaveSettings()
 {
     try
     {
@@ -974,9 +1387,9 @@ private void SaveSettings()
                 Set("Theme.TextPrimary",       "#FFE7E9EC");
                 Set("Theme.TextSecondary",     "#FF858B94");
                 Set("Theme.TextMuted",         "#FF555B63");
-                Set("Theme.TabSelectedBg",     "#FF111418");
-                Set("Theme.TabSelectedBorder", "#FFD6FF3F");
-                Set("Theme.TabHover",          "#FF1A2026");
+                Set("Theme.TabSelectedBg",     "#FF35363A");
+                Set("Theme.TabSelectedBorder", "#00000000");
+                Set("Theme.TabHover",          "#FF292A2D");
                 Set("Theme.Accent",            "#FFD6FF3F");
             }
             else
@@ -996,8 +1409,8 @@ private void SaveSettings()
                 Set("Theme.TextSecondary",     "#FF24324D");
                 Set("Theme.TextMuted",         "#FF64748B");
                 Set("Theme.TabSelectedBg",     "#FFFFFFFF");
-                Set("Theme.TabSelectedBorder", "#FF00B8D9");
-                Set("Theme.TabHover",          "#50CCE5FF");
+                Set("Theme.TabSelectedBorder", "#00000000");
+                Set("Theme.TabHover",          "#FFE8EAED");
                 Set("Theme.Accent",            "#FF00B8D9");
             }
         }
@@ -1385,6 +1798,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
             SaveBookmarks();
             SaveSettings();
             _keyboardHook?.Dispose();
+            try { _aiChatWindow?.Close(); } catch { }
             try
             {
                 if (Directory.Exists(_screenshotsTempFolder))
@@ -2353,7 +2767,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
         private void AiChatToggle_Click(object sender, RoutedEventArgs e)
         {
-            ToggleAiChat();
+            OpenAiChatTab();
         }
 
         private async void AiSendButton_Click(object sender, RoutedEventArgs e)
@@ -2469,7 +2883,14 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         }
         else if (actionKey == Key.T)
         {
-            Dispatcher.Invoke(ToggleCompleteTransparency);
+            if (_isBrowserMode)
+            {
+                Dispatcher.Invoke(ToggleAiTransparency);
+            }
+            else
+            {
+                Dispatcher.Invoke(ToggleCompleteTransparency);
+            }
             handled = true;
         }
         // Resize: Shift+Alt+Up = bigger, Shift+Alt+Down = smaller
@@ -2490,27 +2911,59 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
     }
     else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.T)
     {
-        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
-                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused);
-
-        if (this.IsActive && !isEditingText)
+        if (_isBrowserMode)
         {
-            Dispatcher.Invoke(ToggleCompleteTransparency);
+            Dispatcher.Invoke(ToggleAiTransparency);
             handled = true;
         }
         else
         {
-            var now = DateTime.UtcNow;
-            if ((now - _lastShiftTPressTime).TotalMilliseconds <= 450)
+            bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                                 (_aiChatInput != null && _aiChatInput.IsKeyboardFocused);
+
+            if (this.IsActive && !isEditingText)
             {
                 Dispatcher.Invoke(ToggleCompleteTransparency);
                 handled = true;
-                _lastShiftTPressTime = DateTime.MinValue;
             }
             else
             {
-                _lastShiftTPressTime = now;
+                var now = DateTime.UtcNow;
+                if ((now - _lastShiftTPressTime).TotalMilliseconds <= 450)
+                {
+                    Dispatcher.Invoke(ToggleCompleteTransparency);
+                    handled = true;
+                    _lastShiftTPressTime = DateTime.MinValue;
+                }
+                else
+                {
+                    _lastShiftTPressTime = now;
+                }
             }
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.I)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+
+        if (_isBrowserMode && !isEditingText)
+        {
+            Dispatcher.Invoke(AccessAiMode);
+            handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.B)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+
+        if (!isEditingText)
+        {
+            Dispatcher.Invoke(ToggleBrowserMode);
+            handled = true;
         }
     }
 
@@ -2776,7 +3229,7 @@ private bool AreHotkeyModifiersAPotentialMatch()
 ";
             await coreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
         }
-private async void AddNewBrowserTab(string url)
+        public async void AddNewBrowserTab(string url)
         {
             var newTab = new TabItem();
             var headerPanel = new Grid();
@@ -2820,10 +3273,9 @@ private async void AddNewBrowserTab(string url)
             var faviconImage = new System.Windows.Controls.Image();
             iconBackground.Child = faviconImage;
 
-
             var loadingSpinner = new System.Windows.Controls.Image
             {
-                Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("./loading.png", UriKind.Relative)),
+                Source = LoadAppImage("loading.png"),
                 Style = (Style)FindResource("LoadingSpinnerStyle"),
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
@@ -2862,14 +3314,31 @@ private async void AddNewBrowserTab(string url)
             BrowserTabs.Items.Add(newTab);
             BrowserTabs.SelectedItem = newTab;
 
-            if (_sharedWebViewEnvironment == null)
+            try
             {
-                var options = new Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions(
-                    "--disable-features=Translate,CalculateNativeWinOcclusion --disable-background-networking --disable-component-update"
-                );
-                _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, _userDataFolder, options);
+                if (_sharedWebViewEnvironment == null)
+                {
+                    var options = new Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions(
+                        "--disable-features=Translate,CalculateNativeWinOcclusion --disable-background-networking --disable-component-update"
+                    );
+                    _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, _userDataFolder, options);
+                }
+                await webView.EnsureCoreWebView2Async(_sharedWebViewEnvironment);
             }
-            await webView.EnsureCoreWebView2Async(_sharedWebViewEnvironment);
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"WebView2 initialization failed: {ex.Message}");
+                titleTextBlock.Text = "Browser Error";
+                loadingSpinner.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (webView.CoreWebView2 == null)
+            {
+                titleTextBlock.Text = "Browser Unavailable";
+                loadingSpinner.Visibility = Visibility.Collapsed;
+                return;
+            }
 
             // Allow screenshots to be dropped into the web content.
             try { WebViewDropForwarder.Attach(webView); }
@@ -2944,6 +3413,29 @@ private async void AddNewBrowserTab(string url)
             webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
             webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
 
+            webView.CoreWebView2.ProcessFailed += (s, args) =>
+            {
+                Debug.WriteLine($"WebView2 process failed: {args.ProcessFailedKind}, reason: {args.Reason}, exitCode: {args.ExitCode}");
+                Dispatcher.Invoke(() =>
+                {
+                    titleTextBlock.Text = "Browser crashed";
+                    _tabLoadingStates[webView] = false;
+                    UpdateSpinnerState(isLoading: false);
+                    try
+                    {
+                        if (args.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessExited ||
+                            args.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
+                        {
+                            webView.Reload();
+                        }
+                    }
+                    catch (Exception rex)
+                    {
+                        Debug.WriteLine($"Failed to reload crashed webview: {rex.Message}");
+                    }
+                });
+            };
+
             string cursorScript = @"
                 (function() {
                     'use strict';
@@ -3010,7 +3502,10 @@ private void CoreWebView2_PermissionRequested(object? sender, CoreWebView2Permis
 }
 private void MainWindow_Deactivated(object? sender, EventArgs e)
 {
-    if (_minimizeOnFocusLoss && !_isMinimized && this.OwnedWindows.Count == 0)
+    // In Browser Mode, NEVER minimize on focus loss! Both the browser and the AI companion must stay open and available.
+    if (_isBrowserMode) return;
+
+    if (_minimizeOnFocusLoss && !_isMinimized && this.OwnedWindows.Count == 0 && (_aiChatWindow == null || !_aiChatWindow.IsVisible))
     {
         MinimizeCustom();
     }
@@ -3084,19 +3579,35 @@ private void Dialog_SourceInitialized(object? sender, EventArgs e)
             var webView = GetCurrentWebView();
             if (webView == null) return;
 
+            string targetUrl;
             Uri uri;
             if (Uri.TryCreate(address, UriKind.Absolute, out uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
             {
-                webView.CoreWebView2.Navigate(address);
+                targetUrl = address;
             }
             else if (!address.Contains(" ") && address.Contains("."))
             {
-                webView.CoreWebView2.Navigate("http://" + address);
+                targetUrl = "https://" + address;
             }
             else
             {
-                string searchUrl = $"https://www.google.com/search?q={HttpUtility.UrlEncode(address)}";
-                webView.CoreWebView2.Navigate(searchUrl);
+                targetUrl = $"https://www.google.com/search?q={HttpUtility.UrlEncode(address)}";
+            }
+
+            try
+            {
+                if (webView.CoreWebView2 != null)
+                {
+                    webView.CoreWebView2.Navigate(targetUrl);
+                }
+                else
+                {
+                    webView.Source = new Uri(targetUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Navigation error: {ex.Message}");
             }
         }
         
@@ -3219,7 +3730,7 @@ private void MinimizeButton_Click(object sender, RoutedEventArgs e)
                 if (_muteButton.Content is System.Windows.Controls.Image muteImage)
                 {
                     var uriString = _isMuted ? "muted.png" : "sound.png";
-                    muteImage.Source = new BitmapImage(new Uri(uriString, UriKind.Relative));
+                    muteImage.Source = LoadAppImage(uriString);
                 }
             }
             if (_muteStatusText != null) _muteStatusText.Text = _isMuted ? "Muted" : "Not Muted";

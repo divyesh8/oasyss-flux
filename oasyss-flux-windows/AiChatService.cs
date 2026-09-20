@@ -27,6 +27,10 @@ namespace MyOverlayPOC
             set { _content = value; OnPropertyChanged(); }
         }
 
+        public string? ImageBase64 { get; set; }
+        public System.Windows.Media.ImageSource? ImagePreview { get; set; }
+        public bool HasImage => !string.IsNullOrEmpty(ImageBase64);
+
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public bool IsUser => Role == "user";
 
@@ -69,19 +73,35 @@ namespace MyOverlayPOC
         public async Task<string> SendMessageAsync(List<ChatMessage> history, string modelId, string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
-                return "⚠️ Gemini API key not set. Go to Settings → AI Configuration to add your key.\nGet a free key at: https://aistudio.google.com/apikey";
+                return "⚠️ Gemini API key not set. Click ⚙ Settings at the top to paste your key.\nGet a free key at: https://aistudio.google.com/apikey";
 
             using var client = new HttpClient();
             var url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelId}:generateContent?key={apiKey}";
 
-            // Build Gemini conversation format
+            // Build Gemini conversation format with multimodal vision support
             var contents = new List<object>();
             foreach (var msg in history)
             {
+                var parts = new List<object>();
+                if (!string.IsNullOrEmpty(msg.ImageBase64))
+                {
+                    parts.Add(new
+                    {
+                        inline_data = new
+                        {
+                            mime_type = "image/png",
+                            data = msg.ImageBase64
+                        }
+                    });
+                }
+                if (!string.IsNullOrEmpty(msg.Content))
+                {
+                    parts.Add(new { text = msg.Content });
+                }
                 contents.Add(new
                 {
                     role = msg.IsUser ? "user" : "model",
-                    parts = new[] { new { text = msg.Content } }
+                    parts = parts.ToArray()
                 });
             }
 
@@ -145,16 +165,41 @@ namespace MyOverlayPOC
         public async Task<string> SendMessageAsync(List<ChatMessage> history, string modelId, string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
-                return "⚠️ OpenAI API key not set. Go to Settings → AI Configuration to add your key.\nGet a key at: https://platform.openai.com/api-keys";
+                return "⚠️ OpenAI API key not set. Click ⚙ Settings at the top to paste your key.\nGet a key at: https://platform.openai.com/api-keys";
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
-            var messages = history.Select(m => new
+            var messages = new List<object>();
+            foreach (var m in history)
             {
-                role = m.IsUser ? "user" : "assistant",
-                content = m.Content
-            }).ToList();
+                if (!string.IsNullOrEmpty(m.ImageBase64))
+                {
+                    var contentList = new List<object>();
+                    if (!string.IsNullOrEmpty(m.Content))
+                    {
+                        contentList.Add(new { type = "text", text = m.Content });
+                    }
+                    contentList.Add(new
+                    {
+                        type = "image_url",
+                        image_url = new { url = $"data:image/png;base64,{m.ImageBase64}" }
+                    });
+                    messages.Add(new
+                    {
+                        role = m.IsUser ? "user" : "assistant",
+                        content = contentList
+                    });
+                }
+                else
+                {
+                    messages.Add(new
+                    {
+                        role = m.IsUser ? "user" : "assistant",
+                        content = m.Content
+                    });
+                }
+            }
 
             var requestBody = JsonSerializer.Serialize(new
             {
@@ -213,6 +258,7 @@ namespace MyOverlayPOC
 
         public List<AiModelInfo> AvailableModels => new()
         {
+            new AiModelInfo { DisplayName = "Llama 3.2 11B Vision", ModelId = "llama-3.2-11b-vision-preview", Provider = "Groq" },
             new AiModelInfo { DisplayName = "Llama 3.1 70B", ModelId = "llama-3.1-70b-versatile", Provider = "Groq" },
             new AiModelInfo { DisplayName = "Llama 3.1 8B", ModelId = "llama-3.1-8b-instant", Provider = "Groq" },
             new AiModelInfo { DisplayName = "Mixtral 8x7B", ModelId = "mixtral-8x7b-32768", Provider = "Groq" },
@@ -222,16 +268,41 @@ namespace MyOverlayPOC
         public async Task<string> SendMessageAsync(List<ChatMessage> history, string modelId, string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
-                return "⚠️ Groq API key not set. Go to Settings → AI Configuration to add your key.\nGet a free key at: https://console.groq.com/keys";
+                return "⚠️ Groq API key not set. Click ⚙ Settings at the top to paste your key.\nGet a free key at: https://console.groq.com/keys";
 
             using var client = new HttpClient();
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
 
-            var messages = history.Select(m => new
+            var messages = new List<object>();
+            foreach (var m in history)
             {
-                role = m.IsUser ? "user" : "assistant",
-                content = m.Content
-            }).ToList();
+                if (!string.IsNullOrEmpty(m.ImageBase64))
+                {
+                    var contentList = new List<object>();
+                    if (!string.IsNullOrEmpty(m.Content))
+                    {
+                        contentList.Add(new { type = "text", text = m.Content });
+                    }
+                    contentList.Add(new
+                    {
+                        type = "image_url",
+                        image_url = new { url = $"data:image/png;base64,{m.ImageBase64}" }
+                    });
+                    messages.Add(new
+                    {
+                        role = m.IsUser ? "user" : "assistant",
+                        content = contentList
+                    });
+                }
+                else
+                {
+                    messages.Add(new
+                    {
+                        role = m.IsUser ? "user" : "assistant",
+                        content = m.Content
+                    });
+                }
+            }
 
             var requestBody = JsonSerializer.Serialize(new
             {
@@ -376,6 +447,51 @@ namespace MyOverlayPOC
                 var errorMsg = "❌ Request timed out. Please try again.";
                 Messages.Add(new ChatMessage { Role = "assistant", Content = errorMsg, Timestamp = DateTime.Now });
                 return errorMsg;
+            }
+            catch (Exception ex)
+            {
+                var errorMsg = $"❌ Error: {ex.Message}";
+                Messages.Add(new ChatMessage { Role = "assistant", Content = errorMsg, Timestamp = DateTime.Now });
+                return errorMsg;
+            }
+            finally
+            {
+                IsProcessing = false;
+            }
+        }
+
+        public async Task<string> SendWithImageAsync(string userMessage, string base64Image, System.Windows.Media.ImageSource? preview = null)
+        {
+            // Add user message with image
+            Messages.Add(new ChatMessage
+            {
+                Role = "user",
+                Content = userMessage,
+                ImageBase64 = base64Image,
+                ImagePreview = preview,
+                Timestamp = DateTime.Now
+            });
+
+            IsProcessing = true;
+
+            try
+            {
+                if (!_providers.TryGetValue(ActiveProviderName, out var provider))
+                    return $"❌ Unknown provider: {ActiveProviderName}";
+
+                var apiKey = GetApiKeyForProvider(ActiveProviderName);
+                var history = Messages.ToList();
+                var response = await provider.SendMessageAsync(history, ActiveModelId, apiKey);
+
+                // Add assistant message
+                Messages.Add(new ChatMessage
+                {
+                    Role = "assistant",
+                    Content = response,
+                    Timestamp = DateTime.Now
+                });
+
+                return response;
             }
             catch (Exception ex)
             {

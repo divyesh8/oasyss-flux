@@ -710,6 +710,748 @@
       height: 100%;
     }
 
+    .browser-crash-banner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: #0D0E12;
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 20;
+    }
+    .browser-crash-text {
+      font-size: 14px;
+      color: #F87171;
+      font-weight: 500;
+    }
+
+    /* ──────────────────────────────────────────────
+       App Mode Containers & Smooth Transitions
+       ────────────────────────────────────────────── */
+    .app-mode-view {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      transition: opacity 200ms ease;
+    }
+
+    .app-mode-view.active {
+      display: flex;
+    }
+
+    /* ──────────────────────────────────────────────
+       Browser Mode (Chrome-Style Standalone Experience)
+       ────────────────────────────────────────────── */
+    .browser-mode-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-primary);
+      z-index: 50;
+      overflow: hidden;
+    }
+
+    /* Top Chrome Tab Bar */
+    .chrome-tab-strip-bar {
+      height: 40px;
+      min-height: 40px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 10px;
+      gap: 2px;
+      -webkit-app-region: drag;
+      user-select: none;
+      position: relative;
+    }
+
+    .chrome-traffic-lights {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+      margin-right: 12px;
+      margin-bottom: 12px;
+    }
+
+    .chrome-tab-strip {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      overflow-x: auto;
+      flex: 1;
+      height: 100%;
+      -webkit-app-region: no-drag;
+    }
+
+    .chrome-tab-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chrome-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 12px;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      min-width: 120px;
+      max-width: 220px;
+      position: relative;
+      transition: background var(--transition-fast), color var(--transition-fast);
+      border: 1px solid transparent;
+      border-bottom: none;
+      -webkit-app-region: no-drag;
+    }
+
+    .chrome-tab:hover:not(.active) {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .chrome-tab.active {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-weight: 500;
+      border-color: var(--border-color);
+      z-index: 2;
+    }
+
+    .chrome-tab-favicon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+
+    .chrome-tab-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+    }
+
+    .chrome-tab-spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--text-muted);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: tabSpin 0.75s linear infinite;
+    }
+
+    @keyframes tabSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    .chrome-tab-close {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0.8;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .chrome-tab-close:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-primary);
+      opacity: 1;
+    }
+
+    .chrome-new-tab-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      margin-bottom: 4px;
+      margin-left: 4px;
+      -webkit-app-region: no-drag;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .chrome-new-tab-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .chrome-tabbar-drag-region {
+      flex: 1;
+      height: 100%;
+      -webkit-app-region: drag;
+    }
+
+    .chrome-win-controls {
+      display: flex;
+      align-items: center;
+      height: 100%;
+      -webkit-app-region: no-drag;
+      margin-left: 8px;
+    }
+
+    .chrome-win-btn {
+      width: 44px;
+      height: 38px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background var(--transition-fast), color var(--transition-fast);
+    }
+
+    .chrome-win-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .chrome-win-close:hover {
+      background: #E05252 !important;
+      color: #FFFFFF !important;
+    }
+
+    /* Chromium-Style Navigation Toolbar */
+    .chrome-toolbar {
+      height: 44px;
+      min-height: 44px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .chrome-nav-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chrome-nav-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .chrome-nav-btn:hover:not(:disabled) {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .chrome-nav-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .chrome-omnibox {
+      flex: 1;
+      height: 32px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      transition: all var(--transition-fast);
+    }
+
+    .chrome-omnibox:focus-within {
+      border-color: var(--accent);
+      background: var(--bg-elevated);
+      box-shadow: 0 0 0 2px var(--accent-muted);
+    }
+
+    .chrome-security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .chrome-security-badge.secure {
+      color: var(--status-ok);
+    }
+
+    .chrome-security-badge.insecure {
+      color: var(--status-paused);
+    }
+
+    .chrome-omnibox-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-sans);
+    }
+
+    .chrome-omnibox-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 2px;
+      transition: color var(--transition-fast);
+    }
+
+    .chrome-omnibox-btn:hover {
+      color: var(--accent);
+    }
+
+    .chrome-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chrome-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .chrome-action-btn:hover {
+      background: var(--border-subtle);
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+
+    .chrome-btn-flux {
+      border-color: var(--accent-border);
+      color: var(--accent);
+    }
+
+    .chrome-btn-flux:hover {
+      background: var(--accent-muted);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .chrome-menu-wrapper {
+      position: relative;
+    }
+
+    .chrome-menu-dropdown {
+      position: absolute;
+      top: 38px;
+      right: 0;
+      width: 240px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 1000;
+    }
+
+    .chrome-menu-dropdown.active {
+      display: flex;
+    }
+
+    .chrome-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .chrome-menu-item:hover {
+      background: var(--bg-secondary);
+    }
+
+    .chrome-menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 0;
+    }
+
+    .chrome-shortcut {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    .chrome-zoom-row {
+      cursor: default;
+    }
+
+    .chrome-zoom-row:hover {
+      background: transparent;
+    }
+
+    .chrome-zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .zoom-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 3px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .zoom-btn:hover {
+      background: var(--bg-primary);
+      border-color: var(--text-muted);
+    }
+
+    .zoom-level {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      min-width: 38px;
+      text-align: center;
+      color: var(--text-primary);
+    }
+
+    /* Bookmarks Bar */
+    .chrome-bookmarks-bar {
+      height: 28px;
+      min-height: 28px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      font-size: 11px;
+      gap: 6px;
+    }
+
+    .chrome-bookmarks-list {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .chrome-bookmark-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      transition: all var(--transition-fast);
+    }
+
+    .chrome-bookmark-item:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    /* Browser Content Area & Viewport */
+    .chrome-content-area {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+      background: #FFFFFF;
+    }
+
+    .chrome-viewport {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: #FFFFFF;
+    }
+
+    /* AI Chat Panel with Independent Transparency */
+    .chrome-ai-panel {
+      width: 380px;
+      height: 100%;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 30;
+      box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+      transition: background 200ms ease, backdrop-filter 200ms ease, opacity 200ms ease;
+    }
+
+    /* Independent Shift+T Transparency for AI Tab */
+    .chrome-ai-panel.transparent-mode {
+      background: rgba(13, 15, 18, 0.18) !important;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-left-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .chrome-ai-panel.transparent-mode .ai-chat-messages {
+      background: transparent !important;
+    }
+
+    .chrome-ai-panel.transparent-mode .ai-input-wrapper {
+      background: rgba(17, 20, 24, 0.45) !important;
+      backdrop-filter: blur(6px);
+    }
+
+    .ai-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+    }
+
+    .ai-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ai-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ai-provider-select {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 10px;
+      padding: 3px 6px;
+      outline: none;
+    }
+
+    .ai-tool-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 3px 6px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      transition: all var(--transition-fast);
+    }
+
+    .ai-tool-btn:hover {
+      background: var(--bg-primary);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .ai-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg-primary);
+    }
+
+    .ai-welcome-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-welcome-icon {
+      font-size: 24px;
+    }
+
+    .ai-welcome-box h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ai-welcome-box p {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .ai-msg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: 90%;
+    }
+
+    .ai-msg.user {
+      align-self: flex-end;
+    }
+
+    .ai-msg.assistant {
+      align-self: flex-start;
+    }
+
+    .ai-msg-bubble {
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 12px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .ai-msg.user .ai-msg-bubble {
+      background: var(--accent);
+      color: #08090B;
+      font-weight: 500;
+    }
+
+    .ai-msg.assistant .ai-msg-bubble {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .ai-msg-meta {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 8px;
+    }
+
+    .ai-input-wrapper {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-chat-input {
+      flex: 1;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 12px;
+      outline: none;
+      resize: none;
+      max-height: 80px;
+    }
+
+    .ai-chat-input:focus {
+      border-color: var(--accent);
+    }
+
+    .ai-send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      border: none;
+      color: #08090B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: opacity var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .ai-send-btn:hover {
+      opacity: 0.9;
+    }
+
     /* Command Palette Floating Modal */
     .palette-backdrop {
       position: fixed;
@@ -903,34 +1645,236 @@
       color: var(--text-muted);
       margin-top: 10px;
     }
+
+    /* ──────────────────────────────────────────────
+       Safe Browser Mode (Safe Exam Browser Inspired Experience)
+       ────────────────────────────────────────────── */
+    .safe-browser-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #08090B;
+      z-index: 60;
+      overflow: hidden;
+    }
+
+    .safe-browser-header {
+      height: 38px;
+      min-height: 38px;
+      background: #0B0D11;
+      border-bottom: 1px solid #1A1F26;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 10px;
+      -webkit-app-region: drag;
+      user-select: none;
+    }
+
+    .safe-header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #E5E7EB;
+      text-transform: uppercase;
+    }
+
+    .safe-shield-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      background: rgba(0, 223, 129, 0.12);
+      border: 1px solid rgba(0, 223, 129, 0.3);
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      color: #00DF81;
+      letter-spacing: 0.06em;
+    }
+
+    .safe-header-drag {
+      flex: 1;
+      height: 100%;
+      -webkit-app-region: drag;
+    }
+
+    .safe-toolbar {
+      height: 40px;
+      min-height: 40px;
+      background: #0F1217;
+      border-bottom: 1px solid #1F242C;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .safe-nav-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: #9CA3AF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all var(--transition-fast);
+    }
+
+    .safe-nav-btn:hover:not(:disabled) {
+      background: #1C222B;
+      border-color: #2D3748;
+      color: #F3F4F6;
+    }
+
+    .safe-nav-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .safe-address-bar {
+      flex: 1;
+      height: 28px;
+      background: #080A0D;
+      border: 1px solid #1F242C;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      transition: border-color var(--transition-fast);
+    }
+
+    .safe-address-bar:focus-within {
+      border-color: #00DF81;
+      box-shadow: 0 0 0 1px rgba(0, 223, 129, 0.25);
+    }
+
+    .safe-security-indicator {
+      display: flex;
+      align-items: center;
+      color: #00DF81;
+      font-size: 11px;
+    }
+
+    .safe-address-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #F3F4F6;
+      font-size: 12px;
+      font-family: var(--font-mono);
+    }
+
+    .safe-menu-dropdown {
+      position: absolute;
+      top: 36px;
+      right: 0;
+      width: 230px;
+      background: #11141A;
+      border: 1px solid #232832;
+      border-radius: 6px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+      padding: 6px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 1000;
+    }
+
+    .safe-menu-dropdown.active {
+      display: flex;
+    }
+
+    .safe-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #E5E7EB;
+      cursor: pointer;
+      transition: background var(--transition-fast);
+    }
+
+    .safe-menu-item:hover {
+      background: #1C222B;
+    }
+
+    .safe-viewport {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: #FFFFFF;
+    }
   </style>
 </head>
 <body>
 
-  <!-- macOS Unified Window Titlebar -->
-  <header class="macos-titlebar">
-    <div class="traffic-lights">
-      <div class="traffic-light traffic-close" id="btnTrafficClose" title="Close"></div>
-      <div class="traffic-light traffic-minimize" id="btnTrafficMin" title="Minimize"></div>
-      <div class="traffic-light traffic-zoom" id="btnTrafficZoom" title="Zoom"></div>
-    </div>
-    <div class="titlebar-center">
-      <span>OASYSS FLUX</span>
-      <span class="titlebar-badge">DIVYESH EDITION</span>
-      <span style="color: var(--text-muted);">/</span>
-      <span id="headerViewTitle" style="color: var(--text-muted);">SYSTEM OVERVIEW</span>
-    </div>
-    <div class="titlebar-actions">
-      <button class="titlebar-btn" id="btnToggleGhost" title="Toggle Click-Through Ghost Mode (Shift+Cmd+T)">
-        <span>👻</span>
-        <span id="ghostStatusBadge" class="kbd-shortcut">GHOST OFF</span>
-      </button>
-      <button class="titlebar-btn" id="btnOpenPalette" title="Command Palette (⌘K)">
-        <span id="iconCommand"></span>
-        <span class="kbd-shortcut">⌘K</span>
-      </button>
-    </div>
-  </header>
+  <!-- ──────────────────────────────────────────────
+       Flux Mode (Cybersecurity / Privacy Dashboard)
+       ────────────────────────────────────────────── -->
+  <div id="fluxModeRoot" class="app-mode-view active">
+
+    <!-- macOS Unified Window Titlebar -->
+    <header class="macos-titlebar">
+      <div class="traffic-lights" id="fluxTrafficLights">
+        <div class="traffic-light traffic-close" id="btnTrafficClose" title="Close"></div>
+        <div class="traffic-light traffic-minimize" id="btnTrafficMin" title="Minimize"></div>
+        <div class="traffic-light traffic-zoom" id="btnTrafficZoom" title="Zoom"></div>
+      </div>
+      <div class="titlebar-center">
+        <span>OASYSS FLUX</span>
+        <span class="titlebar-badge">DIVYESH EDITION</span>
+        <span style="color: var(--text-muted);">/</span>
+        <span id="headerViewTitle" style="color: var(--text-muted);">SYSTEM OVERVIEW</span>
+      </div>
+      <div class="titlebar-actions">
+        <button class="titlebar-btn" id="btnSwitchToSafeBrowser" title="Switch to Safe Browser Mode (Shift+B+S / ⇧⌘BS)" style="border-color: rgba(0, 223, 129, 0.4); color: #00DF81;">
+          <span>🔒</span>
+          <span style="font-weight: 600;">Safe Browser</span>
+        </button>
+        <button class="titlebar-btn" id="btnSwitchToBrowser" title="Switch to Browser Mode (Shift+B)" style="border-color: var(--accent-border); color: var(--accent);">
+          <span>🌐</span>
+          <span style="font-weight: 600;">Browser</span>
+        </button>
+        <button class="titlebar-btn" id="btnToggleGhost" title="Toggle Click-Through Ghost Mode (Shift+Cmd+T)">
+          <span>👻</span>
+          <span id="ghostStatusBadge" class="kbd-shortcut">GHOST OFF</span>
+        </button>
+        <button class="titlebar-btn" id="btnOpenPalette" title="Command Palette (⌘K)">
+          <span id="iconCommand"></span>
+          <span class="kbd-shortcut">⌘K</span>
+        </button>
+
+        <!-- Windows Window Controls for Flux Mode -->
+        <div class="chrome-win-controls" id="fluxWinControls" style="display: none; margin-left: 6px;">
+          <button class="chrome-win-btn chrome-win-min" id="fluxBtnWinMin" title="Minimize">
+            <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+          </button>
+          <button class="chrome-win-btn chrome-win-max" id="fluxBtnWinMax" title="Maximize">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>
+          </button>
+          <button class="chrome-win-btn chrome-win-close" id="fluxBtnWinClose" title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2"><line x1="0" y1="0" x2="10" y2="10"/><line x1="10" y1="0" x2="0" y2="10"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
 
   <div class="app-body">
     <!-- macOS Sidebar -->
@@ -1053,6 +1997,8 @@
             <button class="browser-nav-btn" id="btnBrowserReload" title="Reload (⌘R)">&#x21bb;</button>
             <input type="text" class="browser-address-input" id="browserAddressInput" placeholder="Search with Google or enter address...">
             <button class="browser-nav-btn" id="btnBrowserMute" title="Global Audio Mute">🔊</button>
+            <button class="btn btn-sm" id="btnSwitchToSafeBrowserFromTab" style="padding: 4px 10px; font-size: 11px; border-color: rgba(0, 223, 129, 0.4); color: #00DF81;" title="Switch to Safe Browser Mode (Shift+B+S / ⇧⌘BS)">Safe Browser</button>
+            <button class="btn btn-sm btn-accent" id="btnSwitchToBrowserFromTab" style="padding: 4px 10px; font-size: 11px;" title="Switch to Full Chrome-Style Browser Mode">Switch to Browser</button>
           </div>
 
           <!-- Quick Bookmarks Bar -->
@@ -1064,8 +2010,13 @@
             <span class="browser-bookmark-item" data-url="https://developer.mozilla.org">MDN Web Docs</span>
           </div>
 
-          <!-- Browser Viewport (Isolated Sandbox Frame) -->
-          <iframe class="browser-viewport" id="browserFrame" src="https://www.google.com" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+          <!-- Browser Viewport Container -->
+          <div class="browser-viewport" id="browserViewport">
+            <div class="browser-crash-banner" id="browserCrashBanner" style="display: none;">
+              <span class="browser-crash-text" id="browserCrashText">Browser renderer crashed.</span>
+              <button class="btn btn-sm" id="btnReloadBrowser">Reload Browser</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -1343,6 +2294,329 @@
       </section>
 
     </main>
+  </div>
+</div> <!-- End #fluxModeRoot -->
+
+  <!-- ──────────────────────────────────────────────
+       Browser Mode (Full Chromium-Style Standalone UI)
+       ────────────────────────────────────────────── -->
+  <div id="browserModeRoot" class="browser-mode-container" style="display: none;">
+    <!-- 1. Chromium Tab Bar -->
+    <div class="chrome-tab-strip-bar">
+      <!-- macOS Traffic Lights -->
+      <div class="chrome-traffic-lights" id="chromeTrafficLights">
+        <div class="traffic-light traffic-close" id="chromeBtnTrafficClose" title="Close"></div>
+        <div class="traffic-light traffic-minimize" id="chromeBtnTrafficMin" title="Minimize"></div>
+        <div class="traffic-light traffic-zoom" id="chromeBtnTrafficZoom" title="Zoom"></div>
+      </div>
+
+      <!-- Tab Strip -->
+      <div class="chrome-tab-strip" id="chromeTabStrip">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- New Tab Button -->
+      <button class="chrome-new-tab-btn" id="chromeBtnNewTab" title="New Tab (⌘T / Ctrl+T)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+
+      <!-- Drag region -->
+      <div class="chrome-tabbar-drag-region"></div>
+
+      <!-- Windows Window Controls -->
+      <div class="chrome-win-controls" id="chromeWinControls">
+        <button class="chrome-win-btn chrome-win-min" id="chromeBtnWinMin" title="Minimize">
+          <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="chrome-win-btn chrome-win-max" id="chromeBtnWinMax" title="Maximize">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>
+        </button>
+        <button class="chrome-win-btn chrome-win-close" id="chromeBtnWinClose" title="Close">
+          <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2"><line x1="0" y1="0" x2="10" y2="10"/><line x1="10" y1="0" x2="0" y2="10"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Omnibox Toolbar -->
+    <div class="chrome-toolbar">
+      <div class="chrome-nav-group">
+        <button class="chrome-nav-btn" id="chromeBtnBack" title="Click to go back" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </button>
+        <button class="chrome-nav-btn" id="chromeBtnForward" title="Click to go forward" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+        <button class="chrome-nav-btn" id="chromeBtnReload" title="Reload this page (⌘R / Ctrl+R)">
+          <svg class="reload-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19"/></svg>
+          <svg class="stop-icon" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Omnibox -->
+      <div class="chrome-omnibox" id="chromeOmnibox">
+        <div class="chrome-security-badge" id="chromeSecurityBadge" title="Connection is secure">
+          <svg class="lock-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <svg class="warning-icon" style="display:none;" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E5A93C" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <input type="text" class="chrome-omnibox-input" id="chromeOmniboxInput" placeholder="Search Google or type a URL" autocomplete="off" spellcheck="false">
+        <button class="chrome-omnibox-btn" id="chromeBtnBookmark" title="Bookmark this tab (⌘D / Ctrl+D)">
+          <svg class="star-outline" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg class="star-filled" style="display:none;" width="15" height="15" viewBox="0 0 24 24" fill="#E5A93C" stroke="#E5A93C" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </button>
+      </div>
+
+      <!-- Action Group -->
+      <div class="chrome-actions-group">
+        <button class="chrome-action-btn" id="chromeBtnAiChat" title="AI Research Assistant (Shift+I)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8.01" y2="16"/><line x1="16" y1="16" x2="16.01" y2="16"/></svg>
+          <span class="btn-label">AI Chat</span>
+        </button>
+
+        <button class="chrome-action-btn chrome-btn-flux" id="chromeBtnSwitchFlux" title="Switch to Oasyss Flux Dashboard">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          <span class="btn-label">Flux</span>
+        </button>
+
+        <div class="chrome-menu-wrapper">
+          <button class="chrome-action-btn" id="chromeBtnMenu" title="Customize and control Oasyss Flux Browser">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <div class="chrome-menu-dropdown" id="chromeMenuDropdown">
+            <div class="chrome-menu-item" id="cmenuNewTab">
+              <span>New Tab</span>
+              <span class="chrome-shortcut">⌘T</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuReload">
+              <span>Reload</span>
+              <span class="chrome-shortcut">⌘R</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuBookmark">
+              <span>Bookmark This Tab</span>
+              <span class="chrome-shortcut">⌘D</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuAiChat">
+              <span>AI Research Assistant</span>
+              <span class="chrome-shortcut">⇧I</span>
+            </div>
+            <div class="chrome-menu-divider"></div>
+            <div class="chrome-menu-item chrome-zoom-row">
+              <span>Zoom</span>
+              <div class="chrome-zoom-controls">
+                <button class="zoom-btn" id="cmenuZoomOut" title="Zoom Out">-</button>
+                <span class="zoom-level" id="cmenuZoomLevel">100%</span>
+                <button class="zoom-btn" id="cmenuZoomIn" title="Zoom In">+</button>
+                <button class="zoom-btn zoom-reset" id="cmenuZoomReset" title="Reset Zoom">⟲</button>
+              </div>
+            </div>
+            <div class="chrome-menu-item" id="cmenuPrint">
+              <span>Print...</span>
+              <span class="chrome-shortcut">⌘P</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuFind">
+              <span>Find in Page...</span>
+              <span class="chrome-shortcut">⌘F</span>
+            </div>
+            <div class="chrome-menu-divider"></div>
+            <div class="chrome-menu-item" id="cmenuFullscreen">
+              <span id="cmenuFullscreenText">Enter Full Screen</span>
+              <span class="chrome-shortcut" id="cmenuFullscreenShortcut">F11</span>
+            </div>
+            <div class="chrome-menu-divider"></div>
+            <div class="chrome-menu-item" id="cmenuSwitchSafeBrowser">
+              <span style="font-weight: 600; color: #00DF81;">Switch to Safe Browser</span>
+              <span class="chrome-shortcut">Shift+B+S</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuSwitchFlux">
+              <span style="font-weight: 600; color: var(--accent);">Switch to Oasyss Flux</span>
+              <span class="chrome-shortcut">⌘1</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuSettings">
+              <span>Settings</span>
+              <span class="chrome-shortcut">⌘,</span>
+            </div>
+            <div class="chrome-menu-item" id="cmenuAbout">
+              <span>About Oasyss Flux</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Chrome Bookmarks Bar -->
+    <div class="chrome-bookmarks-bar" id="chromeBookmarksBar">
+      <div class="chrome-bookmarks-list" id="chromeBookmarksList">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- 4. Content Area: Viewport + AI Panel -->
+    <div class="chrome-content-area">
+      <div class="chrome-viewport" id="chromeViewport">
+        <div class="browser-crash-banner" id="chromeCrashBanner" style="display: none;">
+          <span class="browser-crash-text" id="chromeCrashText">Browser renderer crashed.</span>
+          <button class="btn btn-sm" id="chromeBtnReloadCrash">Reload Tab</button>
+        </div>
+      </div>
+
+      <!-- AI Assistant Panel (Supports Independent Shift+T Transparency) -->
+      <aside class="chrome-ai-panel" id="chromeAiPanel" style="display: none;">
+        <div class="ai-panel-header">
+          <div class="ai-header-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/></svg>
+            <span>AI Research Assistant</span>
+          </div>
+          <div class="ai-header-actions">
+            <select class="ai-provider-select" id="aiProviderSelect">
+              <option value="Gemini">Gemini (3.6 Flash)</option>
+              <option value="ChatGPT">ChatGPT (GPT-4o Mini)</option>
+              <option value="Groq">Groq (Llama 3.1 70B)</option>
+            </select>
+            <button class="ai-tool-btn" id="btnToggleAiTransparency" title="Toggle AI Tab Transparency (Shift+T)">
+              <span>👻</span>
+              <span id="aiTransBadge" class="kbd-shortcut">TRANS OFF</span>
+            </button>
+            <button class="ai-tool-btn" id="btnCloseAiPanel" title="Close AI Assistant (Esc)">✕</button>
+          </div>
+        </div>
+
+        <div class="ai-chat-messages" id="aiChatMessages">
+          <div class="ai-welcome-box">
+            <div class="ai-welcome-icon">⚡</div>
+            <h3>Oasyss Flux AI Research</h3>
+            <p>Query multi-model AI (Gemini, ChatGPT, Groq) with secure Keychain-backed keys. In Browser Mode, press <kbd>Shift+T</kbd> to toggle transparency for this panel.</p>
+          </div>
+        </div>
+
+        <div class="ai-input-wrapper">
+          <textarea class="ai-chat-input" id="aiChatInput" placeholder="Ask AI assistant... (Enter to send, Shift+Enter for new line)" rows="1"></textarea>
+          <button class="ai-send-btn" id="btnSendAiMessage" title="Send message">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </aside>
+    </div>
+  <!-- ──────────────────────────────────────────────
+       Safe Browser Mode (Dedicated Institutional Safe Browser)
+       ────────────────────────────────────────────── -->
+  <div id="safeBrowserModeRoot" class="safe-browser-container" style="display: none;">
+    <!-- 1. Safe Browser Header Bar -->
+    <div class="safe-browser-header">
+      <!-- macOS Traffic Lights -->
+      <div class="chrome-traffic-lights" id="safeTrafficLights">
+        <div class="traffic-light traffic-close" id="safeBtnTrafficClose" title="Close"></div>
+        <div class="traffic-light traffic-minimize" id="safeBtnTrafficMin" title="Minimize"></div>
+        <div class="traffic-light traffic-zoom" id="safeBtnTrafficZoom" title="Zoom"></div>
+      </div>
+
+      <!-- Title & Identity -->
+      <div class="safe-header-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00DF81" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>Flux Safe Browser</span>
+        <span class="safe-shield-badge">SECURE</span>
+      </div>
+
+      <!-- Drag Region -->
+      <div class="safe-header-drag"></div>
+
+      <!-- Windows Window Controls -->
+      <div class="chrome-win-controls" id="safeWinControls">
+        <button class="chrome-win-btn chrome-win-min" id="safeBtnWinMin" title="Minimize">
+          <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button class="chrome-win-btn chrome-win-max" id="safeBtnWinMax" title="Maximize">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9"/></svg>
+        </button>
+        <button class="chrome-win-btn chrome-win-close" id="safeBtnWinClose" title="Close">
+          <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" stroke-width="1.2"><line x1="0" y1="0" x2="10" y2="10"/><line x1="10" y1="0" x2="0" y2="10"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. Safe Browser Minimal Toolbar -->
+    <div class="safe-toolbar">
+      <button class="safe-nav-btn" id="safeBtnBack" title="Back" disabled>&larr;</button>
+      <button class="safe-nav-btn" id="safeBtnForward" title="Forward" disabled>&rarr;</button>
+      <button class="safe-nav-btn" id="safeBtnReload" title="Reload">&#x21bb;</button>
+
+      <!-- Secure Address Bar -->
+      <div class="safe-address-bar" id="safeAddressBar">
+        <div class="safe-security-indicator" id="safeSecurityBadge" title="Secure Encrypted Connection">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <input type="text" class="safe-address-input" id="safeAddressInput" placeholder="Enter secure address... (Ctrl/Cmd+L to focus)" autocomplete="off" spellcheck="false">
+        <span class="kbd-shortcut" style="font-size: 8px; opacity: 0.6;">Ctrl/Cmd+L</span>
+      </div>
+
+      <!-- Safe Browser Menu (⋮) -->
+      <div style="position: relative;">
+        <button class="safe-nav-btn" id="safeBtnMenu" title="Safe Browser Menu">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <circle cx="12" cy="5" r="1"/>
+            <circle cx="12" cy="12" r="1"/>
+            <circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+
+        <!-- Safe Menu Dropdown -->
+        <div class="safe-menu-dropdown" id="safeMenuDropdown">
+          <div class="safe-menu-item" id="smenuSwitchBrowser">
+            <span>Switch to Browser</span>
+            <span class="chrome-shortcut">Normal Mode</span>
+          </div>
+          <div class="safe-menu-item" id="smenuSwitchFlux">
+            <span style="color: var(--accent); font-weight: 600;">Switch to Oasyss Flux</span>
+            <span class="chrome-shortcut">Dashboard</span>
+          </div>
+          <div class="chrome-menu-divider"></div>
+          <div class="safe-menu-item" id="smenuFullscreen">
+            <span id="smenuFullscreenText">Fullscreen</span>
+            <span class="chrome-shortcut" id="smenuFullscreenShortcut">F11</span>
+          </div>
+          <div class="safe-menu-item" id="smenuReload">
+            <span>Reload</span>
+            <span class="chrome-shortcut">⌘R / F5</span>
+          </div>
+          <div class="chrome-menu-divider"></div>
+          <div class="safe-menu-item" id="smenuInfo">
+            <span>Browser Information</span>
+            <span class="chrome-shortcut">Policy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Safe Browser Viewport -->
+    <div class="safe-viewport" id="safeBrowserViewport">
+      <div class="browser-crash-banner" id="safeCrashBanner" style="display: none;">
+        <span class="browser-crash-text" id="safeCrashText">Safe Browser renderer crashed.</span>
+        <button class="btn btn-sm" id="safeBtnReloadCrash">Reload Page</button>
+      </div>
+    </div>
+
+    <!-- 4. Safe Browser Information Modal -->
+    <div class="palette-backdrop" id="safeInfoModal" style="display: none;">
+      <div class="palette-modal" style="max-width: 480px; padding: 24px; text-align: left;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h2 style="font-size: 14px; font-weight: 700; color: #F3F4F6; letter-spacing: 0.06em; text-transform: uppercase;">Flux Safe Browser Info</h2>
+          <button class="btn btn-sm" id="btnCloseSafeInfo" style="padding: 2px 8px; cursor: pointer;">&times;</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; color: #9CA3AF;">
+          <div><strong>Engine:</strong> Embedded Sandboxed Electron Engine</div>
+          <div><strong>Identity:</strong> Flux Safe Browser (SEB Inspired)</div>
+          <div><strong>Allowed Domains:</strong> <span id="safeInfoAllowedDomains" style="font-family: var(--font-mono); color: #00DF81;">example.com, srmist.edu.in</span></div>
+          <div><strong>Downloads:</strong> <span id="safeInfoDownloads" style="color: #E5A93C;">Blocked by Policy</span></div>
+          <div><strong>Popups:</strong> <span style="color: #E5A93C;">Blocked (Single Tab Only)</span></div>
+          <div><strong>TLS / SSL Validation:</strong> <span style="color: #00DF81;">Enforced</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Command Palette Floating Panel (⌘ + K) -->
