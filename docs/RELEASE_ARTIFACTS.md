@@ -71,9 +71,9 @@ Oasyss Flux.app/Contents/Frameworks/
 
 | File | SHA-256 Checksum | Verification Status |
 | :--- | :--- | :--- |
-| `Oasyss Flux — macOS Universal.dmg` | *Generated on macOS runner upon CI build completion* | Unsigned Validation Build / Release Candidate |
-| `Oasyss Flux — macOS Universal.zip` | *Generated on macOS runner upon CI build completion* | Unsigned Validation Build / Release Candidate |
-| `assets/macos/AppIcon.icns` | `75a7fc4d0cb5392ad2ae68e82ef7eaeb6d5b00c6d71b4020c78a0f5d470d0fd8` | Verified (889,095 bytes) |
+| `Oasyss Flux — macOS Universal.dmg` | `29ef9bbfa1d35daabd0fefdd90954983f1d6f59c20483e9d4616a10395d87d2a` | Universal 2 DMG Validated (CI Run 35506874748) |
+| `Oasyss Flux — macOS Universal.zip` | `00381b5ce689f4918f44b2a38e45437e8bb3f2041aebee9a320e6736420b7bc0` | Universal 2 App Archive Validated (CI Run 35506874748) |
+| `assets/macos/AppIcon.icns` | `75a7fc4d0cb5392ad2ae68e82ef7eaeb6d5b00c6d71b4020c78a0f5d470d0fd8` | Verified (889,095 bytes, 11 resolutions) |
 
 ---
 
