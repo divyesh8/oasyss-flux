@@ -31,12 +31,12 @@
         </Style>
         <Style x:Key="DialogBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource Theme.DialogBackground}"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Theme.Border}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="CornerRadius" Value="6"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#00E5FF" BlurRadius="20" ShadowDepth="0" Opacity="0.35"/>
+                    <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="2" Opacity="0.4"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -52,9 +52,9 @@
         </Style>
 
         <Style x:Key="DialogButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#00E5FF"/>
-            <Setter Property="BorderBrush" Value="#00E5FF"/>
+            <Setter Property="Background" Value="{DynamicResource Theme.SurfaceAlt}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.TextPrimary}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Theme.Border}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="14,6"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -65,18 +65,17 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                                CornerRadius="4">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#00E5FF"/>
-                                <Setter Property="Foreground" Value="#0A0E1A"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D6FF3F"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="#7B61FF"/>
-                                <Setter TargetName="border" Property="BorderBrush" Value="#7B61FF"/>
-                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Theme.SurfacePressed}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D6FF3F"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -91,8 +90,8 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="7,5"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="CaretBrush" Value="#00E5FF"/>
-            <Setter Property="SelectionBrush" Value="#7B61FF"/>
+            <Setter Property="CaretBrush" Value="#D6FF3F"/>
+            <Setter Property="SelectionBrush" Value="#272E36"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -100,12 +99,12 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6">
+                                CornerRadius="4">
                             <ScrollViewer x:Name="PART_ContentHost" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="#00E5FF"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#D6FF3F"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -121,13 +120,13 @@
                     <ControlTemplate TargetType="CheckBox">
                         <StackPanel Orientation="Horizontal">
                             <Border x:Name="checkBoxBorder"
-                                    Width="18" Height="18"
-                                    BorderBrush="{DynamicResource Theme.Border}"
-                                    Background="{DynamicResource Theme.Input}"
-                                    BorderThickness="1"
-                                    CornerRadius="4">
+                                     Width="18" Height="18"
+                                     BorderBrush="{DynamicResource Theme.Border}"
+                                     Background="{DynamicResource Theme.Input}"
+                                     BorderThickness="1"
+                                     CornerRadius="3">
                                 <TextBlock x:Name="checkMark" Text="✔"
-                                           Foreground="#00E5FF"
+                                           Foreground="#D6FF3F"
                                            FontSize="13"
                                            FontWeight="Bold"
                                            Visibility="Collapsed"
@@ -140,10 +139,10 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="checkMark" Property="Visibility" Value="Visible" />
-                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#00E5FF"/>
+                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#D6FF3F"/>
                             </Trigger>
                              <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#00E5FF"/>
+                                <Setter TargetName="checkBoxBorder" Property="BorderBrush" Value="#D6FF3F"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -307,8 +306,8 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#FF00E5FF"/>
-                    <Setter Property="Background" Value="#3300E5FF"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Theme.TextPrimary}"/>
+                    <Setter Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -335,6 +334,38 @@
                 </EventTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="SidebarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Theme.TextSecondary}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontFamily" Value="Segoe UI Variable, Inter, Segoe UI"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource Theme.TextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Border x:Name="MainOverlayBorder" Padding="15" Background="{DynamicResource Theme.AppBackground}" CornerRadius="8" BorderBrush="{DynamicResource Theme.AppBorder}" BorderThickness="1">
@@ -359,7 +390,7 @@
 
                                     <Border x:Name="DropSeparator"
                                             Width="2"
-                                            Background="#00E5FF"
+                                            Background="#D6FF3F"
                                             HorizontalAlignment="Left"
                                             Margin="0,5,0,5"
                                             CornerRadius="1"
@@ -394,16 +425,16 @@
     
                                     <MultiTrigger>
                                         <MultiTrigger.Conditions>
-                                            <Condition Property="IsSelected" Value="True"/>
-                                            <Condition Property="IsMouseOver" Value="True"/>
+                                             <Condition Property="IsSelected" Value="True"/>
+                                             <Condition Property="IsMouseOver" Value="True"/>
                                         </MultiTrigger.Conditions>
                                         <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource Theme.TabSelectedBg}"/>
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#00E5FF"/>
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#D6FF3F"/>
                                     </MultiTrigger>
 
                                     <DataTrigger Binding="{Binding IsDragOver, RelativeSource={RelativeSource Self}}" Value="True">
-                                        <Setter TargetName="tabBorder" Property="Background" Value="#00E5FF" />
-                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#80D8FF" />
+                                        <Setter TargetName="tabBorder" Property="Background" Value="{DynamicResource Theme.SurfaceHover}" />
+                                        <Setter TargetName="tabBorder" Property="BorderBrush" Value="#D6FF3F" />
                                     </DataTrigger>
 
                                     <DataTrigger Binding="{Binding IsTabDragging, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
@@ -419,361 +450,643 @@
             <TabControl.Template>
                 <ControlTemplate TargetType="{x:Type TabControl}">
                     <Grid KeyboardNavigation.TabNavigation="Local">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-    
-                        <DockPanel Grid.Row="0" Grid.Column="0">
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock x:Name="MuteStatusTextBlock"
-                                           Text="Muted"
-                                           VerticalAlignment="Center"
-                                           Margin="0,0,5,0"
-                                           Foreground="{DynamicResource Theme.TextPrimary}"/>
-                                <StackPanel x:Name="RecordingStatusIndicator" 
-                                            Orientation="Horizontal"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,10,0"
-                                            Visibility="Collapsed">
-                                    <Ellipse Width="10" Height="10" Fill="Red" VerticalAlignment="Center"/>
-                                    <TextBlock x:Name="RecordingTimerTextBlock" 
-                                               Text="00:00"
-                                               Foreground="{DynamicResource Theme.TextPrimary}"
-                                               Margin="5,0,0,0"
-                                               VerticalAlignment="Center"/>
+                        <!-- ROW 0: TOP WINDOW CHROME -->
+                        <Border Grid.Row="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,0,0,1" Padding="8,4" Margin="0,0,0,6">
+                            <DockPanel LastChildFill="True">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock x:Name="MuteStatusTextBlock"
+                                               Text="Muted"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,5,0"
+                                               Foreground="{DynamicResource Theme.TextPrimary}"/>
+                                    <StackPanel x:Name="RecordingStatusIndicator" 
+                                                Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0,0,10,0"
+                                                Visibility="Collapsed">
+                                        <Ellipse Width="8" Height="8" Fill="Red" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="RecordingTimerTextBlock" 
+                                                   Text="00:00"
+                                                   Foreground="{DynamicResource Theme.TextPrimary}"
+                                                   Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <Button x:Name="MuteButtonInTemplate" Margin="0,0,5,0" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26">
+                                        <Image Source="./muted.png" Height="14" />
+                                    </Button>
+                                    <Button x:Name="MinimizeButton" Margin="0,0,5,0" Width="26" Height="26" Style="{StaticResource ModernButtonStyle}">
+                                        <Image Source="./minimize.png" Height="14" />
+                                    </Button>
+                                    <Button x:Name="ExitButton" Margin="0,0,0,0" Width="26" Height="26" Style="{StaticResource ModernButtonStyle}">
+                                        <Image Source="./x.png" Height="14" />
+                                    </Button>
                                 </StackPanel>
-                                <Button x:Name="MuteButtonInTemplate"
-                                        Margin="0,5,5,5"
-                                        Style="{StaticResource ModernButtonStyle}">
-                                    <Image Source="./muted.png" Height="18" />
-                                </Button>
-                                <Button x:Name="MinimizeButton"
-                                        Margin="0,5,5,5"
-                                        Width="30">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="0"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderThickness="0" CornerRadius="4">
-                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Button.Style>
-                                    <Image Source="./minimize.png" Height="23" />
-                                </Button>
 
-                                <Button x:Name="ExitButton"
-                                        Margin="0,5,5,5"
-                                        Width="30">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="0"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" BorderThickness="0" CornerRadius="4">
-                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        </Border>
-                                                        <ControlTemplate.Triggers>
-                                                            <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
-                                                            </Trigger>
-                                                        </ControlTemplate.Triggers>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Style>
-                                    </Button.Style>
-                                    <Image Source="./x.png" Height="23" />
-                                </Button>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,12,0">
-                                    <Border Width="28" Height="28" CornerRadius="14" ClipToBounds="True" Margin="0,0,8,0" Background="#0A0E1A" BorderBrush="#00E5FF" BorderThickness="1.5">
-                                        <Border.Effect>
-                                            <DropShadowEffect Color="#00E5FF" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/>
-                                        </Border.Effect>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Border Width="20" Height="20" CornerRadius="3" Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" Margin="0,0,6,0">
                                         <Image Source="./logo.png" Stretch="UniformToFill"/>
                                     </Border>
-                                    <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="OASYSS FLUX" Foreground="#00E5FF" FontWeight="Bold" FontSize="11" FontFamily="Segoe UI, Consolas"/>
-                                        <TextBlock Text="DIVYESH EDITION" Foreground="#B388FF" FontSize="8" FontWeight="SemiBold" FontFamily="Segoe UI, Consolas" Margin="0,-1,0,0"/>
-                                    </StackPanel>
-                                </StackPanel>
- 
-                                <TabPanel x:Name="HeaderPanel" 
-                                          IsItemsHost="true" 
-                                          Margin="2,0,0,0" 
-                                          ZIndex="1"
-                                          AllowDrop="True"
-                                          DragOver="HeaderPanel_DragOver"
-                                          Drop="HeaderPanel_Drop" />
-                                
-                                <Button x:Name="NewTabButton"
-                                        Margin="4,0,0,0" BorderThickness="0">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                                                            <ContentPresenter/>
-                                                        </Border>
-                                                    
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
-                                                </Trigger>
-    
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Image Source="./plus.png" Width="15" Height="15" />
-                                </Button>
-                            </StackPanel>
-                        </DockPanel>
-
-                        <DockPanel Grid.Row="1" Grid.Column="0" Margin="5,0,5,10">
-                            <Button x:Name="BackButton" Content="&lt;" Style="{StaticResource ModernButtonStyle}" Width="30" Margin="0,0,2,0" Height="30"/>
-                            <Button x:Name="ForwardButton" Content="&gt;" Style="{StaticResource ModernButtonStyle}" Width="30" Margin="0,0,5,0" Height="30"/>
-                            <Grid Width="30" Height="30" Margin="0,0,5,0">
-                                <Button x:Name="RefreshButton" Style="{StaticResource ModernButtonStyle}" Height="Auto">
-                                    <Image Source="./refresh.png" Height="23" VerticalAlignment="Center" />
-                                </Button>
-                                <Image x:Name="LoadingSpinner" Source="./loading.png"
-                                       Style="{StaticResource LoadingSpinnerStyle}"
-                                       VerticalAlignment="Center"
-                                       HorizontalAlignment="Center"
-                                       Visibility="Collapsed"
-                                       Height="23"/>
-                            </Grid>
-                            <Grid>
-                                <TextBox x:Name="AddressBar"
-                                         VerticalContentAlignment="Center"
-                                         Padding="5,0"
-                                         Background="{DynamicResource Theme.Surface}"
-                                         Foreground="{DynamicResource Theme.TextPrimary}"
-                                         BorderBrush="{DynamicResource Theme.Border}"
-                                         BorderThickness="1"
-                                         Height="30"/>
-                                <TextBlock Text="Search Google or type a URL"
-                                           Foreground="{DynamicResource Theme.TextMuted}"
-                                           IsHitTestVisible="False"
-                                           VerticalAlignment="Center"
-                                           Margin="10,0,0,0">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Text, ElementName=AddressBar}" Value="">
-                                                    <Setter Property="Visibility" Value="Visible"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Grid>
-                        </DockPanel>
-
-                        <Border Grid.Row="2" Grid.Column="0" Background="{DynamicResource Theme.Surface}" CornerRadius="4" Margin="5,0,5,10" Padding="5">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                                    <ItemsControl x:Name="BookmarksBar" ItemsSource="{Binding Bookmarks}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type local:Bookmark}">
-                                                <Button Click="Bookmark_Click" 
-                                                        MouseRightButtonUp="Bookmark_RightClick" 
-                                                        Style="{StaticResource ModernButtonStyle}" 
-                                                        Margin="2,0" 
-                                                        Padding="5,4">
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <Image Source="{Binding Favicon}" Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" MaxWidth="90" VerticalAlignment="Center"/>
-                                                    </StackPanel>
-                                                </Button>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
-                                <Button Grid.Column="1" 
-                                        x:Name="AddBookmarkButton" 
-                                        Width="30" 
-                                        Height="30" 
-                                        Margin="0,0,0,0" 
-                                        Click="AddBookmarkButton_Click">
-                                    <Button.Style>
-                                        <Style TargetType="Button">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                            <Setter Property="BorderThickness" Value="0"/>
-                                            <Setter Property="Template">
-                                                <Setter.Value>
-                                                    <ControlTemplate TargetType="Button">
-                                                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                        </Border>
-                                                    </ControlTemplate>
-                                                </Setter.Value>
-                                            </Setter>
-                                            <Style.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="{DynamicResource Theme.SurfaceHover}"/>
-                                                </Trigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <Image Source="./plus.png" Height="23"/>
-                                </Button>
-
-                                <!-- AI Chat Toggle Button -->
-                                <Button Grid.Column="2" x:Name="AiChatButton" Style="{StaticResource ModernButtonStyle}" Width="30" Height="30" Margin="5,0,0,0" ToolTip="Open AI Chat">
-                                    <TextBlock Text="🤖" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                </Button>
-
-                                <!-- Transparency Toggle Button + Slider Popup -->
-                                <StackPanel Grid.Column="3" Orientation="Vertical" Margin="5,0,0,0">
-                                    <Button x:Name="TransparencyButton" Style="{StaticResource ModernButtonStyle}" Width="30" Height="30" ToolTip="Toggle Transparency (Shift+T / Shift+Alt+T)">
-                                        <TextBlock Text="👁" FontSize="16" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                                    </Button>
-                                    <Border x:Name="TransparencySliderPopup" 
-                                            Visibility="Collapsed" 
-                                            Background="{DynamicResource Theme.Surface}" 
-                                            BorderBrush="{DynamicResource Theme.Border}" 
-                                            BorderThickness="1" 
-                                            CornerRadius="4" 
-                                            Padding="5" 
-                                            Margin="0,2,0,0">
-                                        <StackPanel>
-                                            <TextBlock Text="Opacity" Foreground="{DynamicResource Theme.TextMuted}" FontSize="10" HorizontalAlignment="Center"/>
-                                            <Slider x:Name="TransparencySliderControl" 
-                                                    Minimum="0.1" Maximum="1.0" Value="0.5" 
-                                                    Width="80" 
-                                                    Margin="0,3,0,0"/>
-                                            <Button x:Name="GhostModeButton" Content="Ghost (100%)" 
-                                                    Style="{StaticResource DialogButtonStyle}" 
-                                                    FontSize="10" Padding="4,2" Margin="0,5,0,0" 
-                                                    ToolTip="Make completely transparent &amp; click-through (Shift+T / Shift+Alt+T)"/>
-                                        </StackPanel>
+                                    <TextBlock Text="OASYSS FLUX" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="11" FontFamily="Segoe UI Variable, Inter, Segoe UI" VerticalAlignment="Center"/>
+                                    <TextBlock Text="/" Foreground="{DynamicResource Theme.TextMuted}" FontSize="10" Margin="6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="DIVYESH EDITION" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas" VerticalAlignment="Center"/>
+                                    <Border Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="2" Padding="4,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="WIN64" Foreground="{DynamicResource Theme.TextMuted}" FontSize="8" FontFamily="JetBrains Mono, Consolas"/>
                                     </Border>
                                 </StackPanel>
-
-                                <Button Grid.Column="4" x:Name="SettingsButton" Style="{StaticResource ModernButtonStyle}" Width="30" Height="30" Margin="5,0,0,0" Click="SettingsButton_Click">
-                                    <Image Source="./settings.png" Height="23" VerticalAlignment="Center">
-                                        <Image.Effect>
-                                            <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="4" Opacity="1"/>
-                                        </Image.Effect>
-                                    </Image>
-                                </Button>
-                            </Grid>
+                            </DockPanel>
                         </Border>
 
-                        <Border Grid.Row="3" Grid.Column="0"
-                                BorderBrush="Transparent"
-                                BorderThickness="0"
-                                Background="Transparent"
-                                Padding="0"
-                                CornerRadius="0,0,14,14">
-                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
-                        </Border>
+                        <!-- ROW 1: WORKSPACE WITH SIDEBAR -->
+                        <Grid Grid.Row="1">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="175"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Border x:Name="WebViewPlaceholder"
-                                Grid.Row="3" Grid.Column="0"
-                                Background="#202124"
-                                Opacity="0.5"
-                                CornerRadius="0,0,14,14"
-                                Visibility="Collapsed" />
+                            <!-- COLUMN 0: NARROW SIDEBAR -->
+                            <Border Grid.Column="0" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="6,8" Margin="0,0,6,0">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                        <!-- AI Chat Panel Host (populated dynamically in code-behind) -->
-                        <Grid x:Name="AiChatHost"
-                              Grid.Row="3" Grid.Column="0"
-                              Visibility="Visible" />
+                                    <!-- Top Mini Brand -->
+                                    <StackPanel Grid.Row="0" Margin="4,0,4,10">
+                                        <TextBlock Text="NAVIGATION" Foreground="{DynamicResource Theme.TextMuted}" FontSize="8" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas"/>
+                                    </StackPanel>
 
-             
-                        <Grid Grid.Column="1" Grid.Row="0" Grid.RowSpan="4"
-                              x:Name="ScreenshotTray" Visibility="Collapsed"
-                              Margin="5,5,0,5" MaxHeight="{Binding ElementName=MainOverlayBorder, Path=ActualHeight}">
-                            <Border Background="{DynamicResource Theme.Surface}" CornerRadius="4" Padding="5">
-                                <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
-                                    <ItemsControl x:Name="ScreenshotsContainer" ItemsSource="{Binding Screenshots}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Vertical"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate DataType="{x:Type local:Screenshot}">
-                                                <Grid Margin="5">
-                                                    <Border CornerRadius="6" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" Background="#111">
-                                                        <Image Source="{Binding Image}"
-                                                               Height="84"
-                                                               Stretch="Uniform"
-                                                               MouseMove="Screenshot_MouseMove"/>
-                                                    </Border>
-                                                    <Button Content="x"
-                                                            HorizontalAlignment="Right"
-                                                            VerticalAlignment="Top"
-                                                            Margin="0,-4,-4,0"
-                                                            Width="18" Height="18"
-                                                            FontSize="10"
-                                                            FontWeight="Bold"
-                                                            Foreground="White"
-                                                            Background="#D0FF0000"
-                                                            BorderBrush="White"
-                                                            BorderThickness="1"
-                                                            Click="DeleteScreenshot_Click">
-                                                        <Button.Template>
-                                                            <ControlTemplate TargetType="Button">
-                                                                <Grid>
-                                                                    <Ellipse Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="{TemplateBinding BorderThickness}"/>
-                                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                </Grid>
-                                                            </ControlTemplate>
-                                                        </Button.Template>
-                                                    </Button>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                    <!-- Navigation Links -->
+                                    <StackPanel Grid.Row="1">
+                                        <Button x:Name="BtnNavOverview" Content="OVERVIEW" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavSessions" Content="SESSIONS" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavAnalysis" Content="ANALYSIS" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavMonitor" Content="MONITOR" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavProfiles" Content="PROFILES" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavEventLog" Content="EVENT LOG" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavSettings" Content="SETTINGS" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                        <Button x:Name="BtnNavAbout" Content="ABOUT" Style="{StaticResource SidebarButtonStyle}" Margin="0,1"/>
+                                    </StackPanel>
+
+                                    <!-- Bottom System State -->
+                                    <Border Grid.Row="2" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="4,8,4,0">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Ellipse Width="6" Height="6" Fill="#D6FF3F" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                                <TextBlock Text="SYSTEM READY" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas"/>
+                                            </StackPanel>
+                                            <TextBlock Text="LOCAL MODE | v1.0.0" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="8" FontFamily="JetBrains Mono, Consolas" Margin="12,2,0,0"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
                             </Border>
+
+                            <!-- COLUMN 1: WORKSPACE VIEWS -->
+                            <Grid Grid.Column="1">
+                                <!-- VIEW 1: OVERVIEW -->
+                                <ScrollViewer x:Name="PanelOverview" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <DockPanel>
+                                                <Button x:Name="BtnOverviewOpenSession" DockPanel.Dock="Right" Content="OPEN SESSION WORKSPACE →" Style="{StaticResource DialogButtonStyle}" FontSize="10" Padding="10,4"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="SYSTEM OVERVIEW" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="14"/>
+                                                    <TextBlock Text="LOCAL SECURITY WORKSPACE / DIVYESH EDITION" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <!-- 4 Restrained Status Cards -->
+                                        <UniformGrid Columns="4" Margin="0,0,0,8">
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="● R3" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="SUBSYSTEM" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="ONLINE" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="16" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="0.2ms Loopback latency" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="2,0,2,0">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="● ACTIVE" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="WORKSPACE" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="READY" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="16" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="FLX-8821-LOC context" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="2,0,2,0">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="● OK" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="ENGINE" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="READY" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="16" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="v1.0.0-RELEASE (Win64)" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="● SEC" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="AFFINITY" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="LOCAL" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="16" Margin="0,6,0,0"/>
+                                                    <TextBlock Text="WDA_EXCLUDE active" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
+
+                                        <!-- Subsystem Security Status -->
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <DockPanel Margin="0,0,0,8">
+                                                    <TextBlock Text="ALL BOUNDARIES VERIFIED" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                    <TextBlock Text="SECURITY SUBSYSTEM STATUS" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="11"/>
+                                                </DockPanel>
+                                                <UniformGrid Columns="2">
+                                                    <Border Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,0,4,4">
+                                                        <DockPanel>
+                                                            <TextBlock Text="ENFORCED (Level 2)" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="Display Affinity Guard" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                    </Border>
+                                                    <Border Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="4,0,0,4">
+                                                        <DockPanel>
+                                                            <TextBlock Text="NON-PAGEABLE" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="Memory Workspace" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                    </Border>
+                                                    <Border Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="0,4,4,0">
+                                                        <DockPanel>
+                                                            <TextBlock Text="CLEAN (0 Hooks)" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="Process Hook Integrity" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                    </Border>
+                                                    <Border Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="8" Margin="4,4,0,0">
+                                                        <DockPanel>
+                                                            <TextBlock Text="AES-256-GCM" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="Telemetry Storage" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                    </Border>
+                                                </UniformGrid>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- Recent Audit Stream -->
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="AUDIT STREAM (RECENT)" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,6"/>
+                                                <TextBlock Text="09:07:16.102  [SYS]   Oasyss Flux core engine initialized" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:16.140  [AFFN]  Display affinity set: WDA_EXCLUDEFROMCAPTURE" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:16.188  [AUTH]  Local workspace bound to user: Divyesh" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- VIEW 2: SESSIONS (The Browser Overlay Workspace) -->
+                                <Grid x:Name="PanelSessions" Visibility="Visible">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Tabs Row -->
+                                    <DockPanel Grid.Row="0" Margin="0,0,0,4">
+                                        <Button x:Name="NewTabButton" DockPanel.Dock="Right" Margin="4,0,0,0" BorderThickness="0" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26">
+                                            <Image Source="./plus.png" Width="14" Height="14" />
+                                        </Button>
+                                        <TabPanel x:Name="HeaderPanel" 
+                                                  IsItemsHost="true" 
+                                                  Margin="2,0,0,0" 
+                                                  ZIndex="1"
+                                                  AllowDrop="True"
+                                                  DragOver="HeaderPanel_DragOver"
+                                                  Drop="HeaderPanel_Drop" />
+                                    </DockPanel>
+
+                                    <!-- Navigation Row -->
+                                    <DockPanel Grid.Row="1" Margin="0,0,0,6">
+                                        <Button x:Name="BackButton" Content="&lt;" Style="{StaticResource ModernButtonStyle}" Width="28" Height="28" Margin="0,0,2,0"/>
+                                        <Button x:Name="ForwardButton" Content="&gt;" Style="{StaticResource ModernButtonStyle}" Width="28" Height="28" Margin="0,0,4,0"/>
+                                        <Grid Width="28" Height="28" Margin="0,0,4,0">
+                                            <Button x:Name="RefreshButton" Style="{StaticResource ModernButtonStyle}" Height="Auto">
+                                                <Image Source="./refresh.png" Height="18" VerticalAlignment="Center" />
+                                            </Button>
+                                            <Image x:Name="LoadingSpinner" Source="./loading.png"
+                                                   Style="{StaticResource LoadingSpinnerStyle}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Visibility="Collapsed"
+                                                   Height="18"/>
+                                        </Grid>
+                                        <Grid>
+                                            <TextBox x:Name="AddressBar"
+                                                     VerticalContentAlignment="Center"
+                                                     Padding="6,0"
+                                                     Background="{DynamicResource Theme.Surface}"
+                                                     Foreground="{DynamicResource Theme.TextPrimary}"
+                                                     BorderBrush="{DynamicResource Theme.Border}"
+                                                     BorderThickness="1"
+                                                     Height="28"
+                                                     FontSize="12"/>
+                                            <TextBlock Text="Search Google or type a URL"
+                                                       Foreground="{DynamicResource Theme.TextMuted}"
+                                                       IsHitTestVisible="False"
+                                                       VerticalAlignment="Center"
+                                                       Margin="8,0,0,0"
+                                                       FontSize="11">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Text, ElementName=AddressBar}" Value="">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Grid>
+                                    </DockPanel>
+
+                                    <!-- Toolbar Row -->
+                                    <Border Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Margin="0,0,0,6" Padding="4">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                                                <ItemsControl x:Name="BookmarksBar" ItemsSource="{Binding Bookmarks}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type local:Bookmark}">
+                                                            <Button Click="Bookmark_Click" 
+                                                                    MouseRightButtonUp="Bookmark_RightClick" 
+                                                                    Style="{StaticResource ModernButtonStyle}" 
+                                                                    Margin="2,0" 
+                                                                    Padding="5,3">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Image Source="{Binding Favicon}" Width="14" Height="14" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" MaxWidth="90" VerticalAlignment="Center" FontSize="11"/>
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                            <Button Grid.Column="1" 
+                                                    x:Name="AddBookmarkButton" 
+                                                    Width="26" 
+                                                    Height="26" 
+                                                    Style="{StaticResource ModernButtonStyle}"
+                                                    Click="AddBookmarkButton_Click">
+                                                <Image Source="./plus.png" Height="16"/>
+                                            </Button>
+
+                                            <!-- AI Chat Toggle Button -->
+                                            <Button Grid.Column="2" x:Name="AiChatButton" Style="{StaticResource ModernButtonStyle}" Width="28" Height="26" Margin="4,0,0,0" ToolTip="Open AI Chat">
+                                                <TextBlock Text="AI" FontSize="10" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                            </Button>
+
+                                            <!-- Transparency Toggle Button + Slider Popup -->
+                                            <StackPanel Grid.Column="3" Orientation="Vertical" Margin="4,0,0,0">
+                                                <Button x:Name="TransparencyButton" Style="{StaticResource ModernButtonStyle}" Width="32" Height="26" ToolTip="Toggle Transparency (Shift+T / Shift+Alt+T)">
+                                                    <TextBlock Text="CLR" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextSecondary}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                </Button>
+                                                <Border x:Name="TransparencySliderPopup" 
+                                                        Visibility="Collapsed" 
+                                                        Background="{DynamicResource Theme.Surface}" 
+                                                        BorderBrush="{DynamicResource Theme.Border}" 
+                                                        BorderThickness="1" 
+                                                        CornerRadius="4" 
+                                                        Padding="5" 
+                                                        Margin="0,2,0,0">
+                                                    <StackPanel>
+                                                        <TextBlock Text="Opacity" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" HorizontalAlignment="Center"/>
+                                                        <Slider x:Name="TransparencySliderControl" 
+                                                                Minimum="0.1" Maximum="1.0" Value="0.5" 
+                                                                Width="80" 
+                                                                Margin="0,3,0,0"/>
+                                                        <Button x:Name="GhostModeButton" Content="Ghost (100%)" 
+                                                                Style="{StaticResource DialogButtonStyle}" 
+                                                                FontSize="9" Padding="4,2" Margin="0,4,0,0" 
+                                                                ToolTip="Make completely transparent &amp; click-through (Shift+T / Shift+Alt+T)"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="4" x:Name="SettingsButton" Style="{StaticResource ModernButtonStyle}" Width="26" Height="26" Margin="4,0,0,0" Click="SettingsButton_Click">
+                                                <Image Source="./settings.png" Height="16" VerticalAlignment="Center"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Content Row (WebView2 & AI Chat) -->
+                                    <Border Grid.Row="3"
+                                            BorderBrush="{DynamicResource Theme.Border}"
+                                            BorderThickness="1"
+                                            Background="Transparent"
+                                            Padding="0"
+                                            CornerRadius="4">
+                                        <Grid>
+                                            <ContentPresenter x:Name="PART_SelectedContentHost" ContentSource="SelectedContent"/>
+                                            <Border x:Name="WebViewPlaceholder"
+                                                    Background="#08090B"
+                                                    Opacity="0.5"
+                                                    CornerRadius="4"
+                                                    Visibility="Collapsed" />
+                                            <!-- AI Chat Panel Host -->
+                                            <Grid x:Name="AiChatHost" Visibility="Visible" />
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+
+                                <!-- VIEW 3: ANALYSIS -->
+                                <ScrollViewer x:Name="PanelAnalysis" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <DockPanel>
+                                                <Button x:Name="BtnRunVerification" DockPanel.Dock="Right" Content="RUN VERIFICATION" Style="{StaticResource DialogButtonStyle}" FontSize="10" Padding="12,4"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="ANALYSIS" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="14"/>
+                                                    <TextBlock Text="AUTHORIZED SECURITY RESEARCH" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <UniformGrid Columns="2" Margin="0,0,0,8">
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="TARGET" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    <TextBox Text="proc://auth_broker.dll" Style="{StaticResource DialogTextBoxStyle}" Margin="0,4,0,8"/>
+                                                    <TextBlock Text="ENVIRONMENT" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                                    <TextBox Text="x64 Ring-3 Monitored Sandbox" Style="{StaticResource DialogTextBoxStyle}" Margin="0,4,0,0"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="4,0,0,0">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,0,0,8">
+                                                        <TextBlock Text="PID 10948 (flux_core.exe)" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="PROCESS" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                    </DockPanel>
+                                                    <DockPanel Margin="0,0,0,8">
+                                                        <TextBlock Text="FLX-8821-LOC" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="SESSION" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                    </DockPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="READY" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="STATUS" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                    </DockPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
+
+                                        <!-- Laboratory Findings -->
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="LABORATORY FINDINGS &amp; OBSERVATIONS" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="11" Margin="0,0,0,8"/>
+                                                <TextBlock x:Name="AnalysisFindingsText" 
+                                                           Text="09:14:02.118  TEST CONDITION SATISFIED — Boundary check validated&#x0a;09:14:02.245  NO EVENT DETECTED IN TEST ENVIRONMENT — Capture stream returned 0 pixels&#x0a;09:14:02.390  DISPLAY AFFINITY ENFORCED: WDA_EXCLUDEFROMCAPTURE — Win32 HWND verified&#x0a;09:14:02.512  ANALYSIS COMPLETE — Zero telemetry leaks to unmanaged subprocesses" 
+                                                           Foreground="{DynamicResource Theme.TextSecondary}" 
+                                                           FontSize="10" 
+                                                           FontFamily="JetBrains Mono, Consolas" 
+                                                           LineHeight="18"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- VIEW 4: MONITOR -->
+                                <ScrollViewer x:Name="PanelMonitor" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <DockPanel>
+                                                <TextBlock Text="SAMPLING: 1000ms" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                <StackPanel>
+                                                    <TextBlock Text="MONITOR" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="14"/>
+                                                    <TextBlock Text="LIVE TELEMETRY &amp; PROCESS BOUNDARIES" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </Border>
+
+                                        <!-- Telemetry Data Table -->
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="THREAD ID       SUBSYSTEM             AFFINITY STATE           STATUS" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Margin="0,0,0,6"/>
+                                                <TextBlock Text="T-10948.1       AffinityBroker        EXCLUDE_FROM_CAPTURE     RUNNING" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="T-10948.2       VolatileStore         NON_PAGEABLE             RUNNING" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="T-10948.3       GlobalHotkeyHook      LOW_LEVEL_KBD            ARMED" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="T-10948.4       LoopbackIPC           127.0.0.1:49152          BOUND" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- VIEW 5: PROFILES -->
+                                <ScrollViewer x:Name="PanelProfiles" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="PROFILES" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="14"/>
+                                                <TextBlock Text="ISOLATION &amp; RESEARCH CONFIGURATIONS" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <UniformGrid Columns="2">
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="#D6FF3F" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,4,4">
+                                                <StackPanel>
+                                                    <DockPanel>
+                                                        <TextBlock Text="ACTIVE" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="Default Isolation" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="12"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="Capture exclusion active, standard IPC, volatile caching." Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="4,0,0,4">
+                                                <StackPanel>
+                                                    <TextBlock Text="Deep Telemetry" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="12"/>
+                                                    <TextBlock Text="Verbose event stream, memory differential snapshots." Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,4,4,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="Zero-Persistence Sandbox" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="12"/>
+                                                    <TextBlock Text="Pure volatile RAM execution. Zero disk writes." Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                            <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="10" Margin="4,4,0,0">
+                                                <StackPanel>
+                                                    <TextBlock Text="Proctored Assessment" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="12"/>
+                                                    <TextBlock Text="Screen share invisibility, click pass-through (Shift+T)." Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </UniformGrid>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- VIEW 6: EVENT LOG -->
+                                <ScrollViewer x:Name="PanelEventLog" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="EVENT LOG" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="14"/>
+                                                <TextBlock Text="AUDIT TRAIL &amp; KERNEL INTEROP EVENTS" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="4" Padding="12">
+                                            <StackPanel>
+                                                <TextBlock Text="09:07:16.102  [SYS]   Oasyss Flux core engine initialized (Win64)" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:16.124  [SYS]   Loaded cryptographic provider: AES-256-GCM / SHA-256 HMAC" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:16.140  [AFFN]  Display affinity set: WDA_EXCLUDEFROMCAPTURE" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:16.188  [AUTH]  Local security workspace bound to user: Divyesh" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:18.005  [SESS]  SESSION created: FLX-8821-LOC in mode: LOCAL_ISOLATED" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:22.450  [ANLY]  TEST CONDITION SATISFIED: Zero frame capture detected" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:22.490  [ANLY]  NO EVENT DETECTED IN TEST ENVIRONMENT" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                                <TextBlock Text="09:07:22.510  [ANLY]  ANALYSIS completed with status: NORMAL" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+
+                                <!-- VIEW 7: ABOUT -->
+                                <ScrollViewer x:Name="PanelAbout" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                    <StackPanel Margin="6,0,6,6" MaxWidth="560" HorizontalAlignment="Left">
+                                        <Border Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <DockPanel Margin="0,0,0,12">
+                                                    <Border Width="48" Height="48" CornerRadius="6" Background="{DynamicResource Theme.SurfaceAlt}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" Margin="0,0,12,0">
+                                                        <Image Source="./logo.png" Stretch="UniformToFill"/>
+                                                    </Border>
+                                                    <StackPanel VerticalAlignment="Center">
+                                                        <TextBlock Text="OASYSS FLUX" Foreground="{DynamicResource Theme.TextPrimary}" FontWeight="SemiBold" FontSize="16"/>
+                                                        <TextBlock Text="DIVYESH EDITION" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" Margin="0,2,0,0"/>
+                                                        <TextBlock Text="Personal Security &amp; Privacy Research Utility" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" Margin="0,2,0,0"/>
+                                                    </StackPanel>
+                                                </DockPanel>
+
+                                                <Border BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="0,8" Margin="0,4">
+                                                    <StackPanel>
+                                                        <DockPanel Margin="0,3">
+                                                            <TextBlock Text="1.0.0-RELEASE" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="VERSION" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,3">
+                                                            <TextBlock Text="WINDOWS x64 (Direct Win32 Interop)" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="ARCHITECTURE" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,3">
+                                                            <TextBlock Text="WDA_EXCLUDEFROMCAPTURE" Foreground="#D6FF3F" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="DISPLAY AFFINITY" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                        <DockPanel Margin="0,3">
+                                                            <TextBlock Text="AES-256-GCM / SHA-256 HMAC" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="10" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                            <TextBlock Text="CRYPTOGRAPHY" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="10"/>
+                                                        </DockPanel>
+                                                    </StackPanel>
+                                                </Border>
+
+                                                <Border BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="0,8,0,0" Margin="0,8,0,0">
+                                                    <DockPanel>
+                                                        <TextBlock Text="Designed &amp; engineered by Divyesh" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas" DockPanel.Dock="Right"/>
+                                                        <TextBlock Text="Personal research build" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9"/>
+                                                    </DockPanel>
+                                                </Border>
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+
+                            <!-- COLUMN 2: SCREENSHOT TRAY -->
+                            <Grid Grid.Column="2"
+                                  x:Name="ScreenshotTray" Visibility="Collapsed"
+                                  Margin="5,0,0,0" MaxHeight="{Binding ElementName=MainOverlayBorder, Path=ActualHeight}">
+                                <Border Background="{DynamicResource Theme.Surface}" CornerRadius="4" Padding="5">
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                        <ItemsControl x:Name="ScreenshotsContainer" ItemsSource="{Binding Screenshots}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Vertical"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type local:Screenshot}">
+                                                    <Grid Margin="5">
+                                                        <Border CornerRadius="6" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="1" Background="#111">
+                                                            <Image Source="{Binding Image}"
+                                                                   Height="84"
+                                                                   Stretch="Uniform"
+                                                                   MouseMove="Screenshot_MouseMove"/>
+                                                        </Border>
+                                                        <Button Content="x"
+                                                                HorizontalAlignment="Right"
+                                                                VerticalAlignment="Top"
+                                                                Margin="0,-4,-4,0"
+                                                                Width="18" Height="18"
+                                                                FontSize="10"
+                                                                FontWeight="Bold"
+                                                                Foreground="White"
+                                                                Background="#D0FF0000"
+                                                                BorderBrush="White"
+                                                                BorderThickness="1"
+                                                                Click="DeleteScreenshot_Click">
+                                                            <Button.Template>
+                                                                <ControlTemplate TargetType="Button">
+                                                                    <Grid>
+                                                                        <Ellipse Fill="{TemplateBinding Background}" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="{TemplateBinding BorderThickness}"/>
+                                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                                    </Grid>
+                                                                </ControlTemplate>
+                                                            </Button.Template>
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                            </Grid>
                         </Grid>
+
+                        <!-- ROW 2: STATUS BAR -->
+                        <Border Grid.Row="2" Background="{DynamicResource Theme.Surface}" BorderBrush="{DynamicResource Theme.Border}" BorderThickness="0,1,0,0" Padding="8,3" Margin="0,6,0,0">
+                            <DockPanel LastChildFill="True">
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                    <TextBlock Text="IPC: 127.0.0.1:49152" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Margin="0,0,10,0"/>
+                                    <TextBlock Text="PANIC: SHIFT+ALT+Z" Foreground="{DynamicResource Theme.TextMuted}" FontSize="9" FontFamily="JetBrains Mono, Consolas" Margin="0,0,10,0"/>
+                                    <TextBlock Text="00:14:32" Foreground="{DynamicResource Theme.TextSecondary}" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="5" Height="5" Fill="#D6FF3F" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="LOCAL v1.0.0 READY" Foreground="{DynamicResource Theme.TextPrimary}" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Margin="0,0,12,0"/>
+                                    <TextBlock Text="AFFINITY: WDA_EXCLUDEFROMCAPTURE" Foreground="#D6FF3F" FontSize="9" FontFamily="JetBrains Mono, Consolas"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
                     </Grid>
                 </ControlTemplate>
             </TabControl.Template>

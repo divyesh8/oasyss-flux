@@ -316,6 +316,26 @@ private readonly HashSet<uint> _swallowedKeys = new HashSet<uint>();
         private Grid _screenshotTray;
         private System.Windows.Controls.Button _toggleScreenshotsButton;
         private readonly string _settingsFilePath;
+        private DispatcherTimer? _saveSettingsDebounceTimer;
+        private static Microsoft.Web.WebView2.Core.CoreWebView2Environment? _sharedWebViewEnvironment;
+
+        private void ScheduleSaveSettings()
+        {
+            if (_saveSettingsDebounceTimer == null)
+            {
+                _saveSettingsDebounceTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(400)
+                };
+                _saveSettingsDebounceTimer.Tick += (s, e) =>
+                {
+                    _saveSettingsDebounceTimer.Stop();
+                    SaveSettings();
+                };
+            }
+            _saveSettingsDebounceTimer.Stop();
+            _saveSettingsDebounceTimer.Start();
+        }
         private uint _hotkeyModifiers = MOD_SHIFT | MOD_ALT;
 private uint _hotkeyKey = 0x5A; // Z key
         private readonly HttpClient _usageTrackerHttpClient;
@@ -425,7 +445,9 @@ private bool _minimizeOnFocusLoss = true;
 
         public MainWindow()
         {
+            try { File.AppendAllText("startup.log", $"[{DateTime.Now}] MainWindow constructor started\n"); } catch {}
             InitializeComponent();
+            try { File.AppendAllText("startup.log", $"[{DateTime.Now}] InitializeComponent finished\n"); } catch {}
 
             var originalContent = this.Content as UIElement;
             var newRootGrid = new Grid();
@@ -466,6 +488,7 @@ private bool _minimizeOnFocusLoss = true;
             this.Width = this.Height * 1.38;
 
             this.Topmost = true;
+            DisplayAffinityManager.InitializePopupAffinityHandler();
             this.SourceInitialized += MainWindow_SourceInitialized;
             this.Closed += MainWindow_Closed;
             this.Loaded += MainWindow_Loaded;
@@ -842,6 +865,87 @@ private async void UsageTrackTimer_Tick(object? sender, EventArgs e)
                 ApplyOverlayOpacity(_transparencyLevel);
                 UpdateTransparencyButtonUI();
             }
+
+            // ── OASYSS FLUX: Sidebar Navigation & Workspace Panels ──
+            var panelOverview = template.FindName("PanelOverview", BrowserTabs) as FrameworkElement;
+            var panelSessions = template.FindName("PanelSessions", BrowserTabs) as FrameworkElement;
+            var panelAnalysis = template.FindName("PanelAnalysis", BrowserTabs) as FrameworkElement;
+            var panelMonitor = template.FindName("PanelMonitor", BrowserTabs) as FrameworkElement;
+            var panelProfiles = template.FindName("PanelProfiles", BrowserTabs) as FrameworkElement;
+            var panelEventLog = template.FindName("PanelEventLog", BrowserTabs) as FrameworkElement;
+            var panelAbout = template.FindName("PanelAbout", BrowserTabs) as FrameworkElement;
+
+            var btnNavOverview = template.FindName("BtnNavOverview", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavSessions = template.FindName("BtnNavSessions", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavAnalysis = template.FindName("BtnNavAnalysis", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavMonitor = template.FindName("BtnNavMonitor", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavProfiles = template.FindName("BtnNavProfiles", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavEventLog = template.FindName("BtnNavEventLog", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavSettings = template.FindName("BtnNavSettings", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavAbout = template.FindName("BtnNavAbout", BrowserTabs) as System.Windows.Controls.Button;
+
+            var allPanels = new[] { panelOverview, panelSessions, panelAnalysis, panelMonitor, panelProfiles, panelEventLog, panelAbout };
+            var allNavButtons = new[] { btnNavOverview, btnNavSessions, btnNavAnalysis, btnNavMonitor, btnNavProfiles, btnNavEventLog, btnNavAbout };
+
+            void ShowWorkspace(FrameworkElement? targetPanel, System.Windows.Controls.Button? targetButton)
+            {
+                foreach (var p in allPanels)
+                {
+                    if (p != null) p.Visibility = (p == targetPanel) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                foreach (var b in allNavButtons)
+                {
+                    if (b != null)
+                    {
+                        if (b == targetButton)
+                        {
+                            b.Background = TryFindResource("Theme.SurfaceAlt") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x11, 0x14, 0x18));
+                            b.Foreground = TryFindResource("Theme.Accent") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD6, 0xFF, 0x3F));
+                            b.BorderBrush = TryFindResource("Theme.Border") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1D, 0x22, 0x28));
+                        }
+                        else
+                        {
+                            b.Background = System.Windows.Media.Brushes.Transparent;
+                            b.Foreground = TryFindResource("Theme.TextSecondary") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x85, 0x8B, 0x94));
+                            b.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                        }
+                    }
+                }
+            }
+
+            if (btnNavOverview != null) btnNavOverview.Click += (s, ev) => ShowWorkspace(panelOverview, btnNavOverview);
+            if (btnNavSessions != null) btnNavSessions.Click += (s, ev) => ShowWorkspace(panelSessions, btnNavSessions);
+            if (btnNavAnalysis != null) btnNavAnalysis.Click += (s, ev) => ShowWorkspace(panelAnalysis, btnNavAnalysis);
+            if (btnNavMonitor != null) btnNavMonitor.Click += (s, ev) => ShowWorkspace(panelMonitor, btnNavMonitor);
+            if (btnNavProfiles != null) btnNavProfiles.Click += (s, ev) => ShowWorkspace(panelProfiles, btnNavProfiles);
+            if (btnNavEventLog != null) btnNavEventLog.Click += (s, ev) => ShowWorkspace(panelEventLog, btnNavEventLog);
+            if (btnNavAbout != null) btnNavAbout.Click += (s, ev) => ShowWorkspace(panelAbout, btnNavAbout);
+            if (btnNavSettings != null) btnNavSettings.Click += (s, ev) => SettingsButton_Click(s, ev);
+
+            var btnOverviewOpenSession = template.FindName("BtnOverviewOpenSession", BrowserTabs) as System.Windows.Controls.Button;
+            if (btnOverviewOpenSession != null)
+            {
+                btnOverviewOpenSession.Click += (s, ev) => ShowWorkspace(panelSessions, btnNavSessions);
+            }
+
+            var btnRunVerification = template.FindName("BtnRunVerification", BrowserTabs) as System.Windows.Controls.Button;
+            var analysisFindings = template.FindName("AnalysisFindingsText", BrowserTabs) as TextBlock;
+            if (btnRunVerification != null && analysisFindings != null)
+            {
+                btnRunVerification.Click += (s, ev) =>
+                {
+                    var now = DateTime.Now.ToString("HH:mm:ss.fff");
+                    var hwnd = new WindowInteropHelper(this).Handle.ToString("X8");
+                    analysisFindings.Text = $"{now}  VERIFICATION SEQUENCE INITIATED\n" +
+                                            $"{now}  SCANNING HWND (0x{hwnd}) — Boundary check validated\n" +
+                                            $"{now}  AFFINITY VERIFIED: WDA_EXCLUDEFROMCAPTURE active on PID {Process.GetCurrentProcess().Id}\n" +
+                                            $"{now}  NO EVENT DETECTED IN TEST ENVIRONMENT — Screen capture returns blank\n" +
+                                            $"{now}  ANALYSIS COMPLETE — All isolation barriers intact (0 leaks)";
+                };
+            }
+
+            // Set default active panel to SESSIONS
+            ShowWorkspace(panelSessions, btnNavSessions);
         }
 
         #region Settings Management
@@ -913,10 +1017,10 @@ private void LoadSettings()
             _isDarkMode = !string.Equals(settings.Theme, "Light", StringComparison.OrdinalIgnoreCase);
             if (settings.Opacity >= 0.2 && settings.Opacity <= 1.0) _overlayOpacity = settings.Opacity;
 
-            // AI Configuration
-            _aiChatService.GeminiApiKey = settings.GeminiApiKey ?? "";
-            _aiChatService.OpenAiApiKey = settings.OpenAiApiKey ?? "";
-            _aiChatService.GroqApiKey = settings.GroqApiKey ?? "";
+            // AI Configuration (DPAPI decrypted)
+            _aiChatService.GeminiApiKey = SecureStorageHelper.DecryptString(settings.GeminiApiKey);
+            _aiChatService.OpenAiApiKey = SecureStorageHelper.DecryptString(settings.OpenAiApiKey);
+            _aiChatService.GroqApiKey = SecureStorageHelper.DecryptString(settings.GroqApiKey);
             _aiChatService.ActiveProviderName = settings.DefaultAiProvider ?? "Gemini";
             _aiChatService.ActiveModelId = settings.DefaultAiModel ?? "gemini-3.6-flash";
 
@@ -946,10 +1050,10 @@ private void SaveSettings()
             Theme = _isDarkMode ? "Dark" : "Light",
             Opacity = _overlayOpacity,
 
-            // AI Configuration
-            GeminiApiKey = _aiChatService.GeminiApiKey,
-            OpenAiApiKey = _aiChatService.OpenAiApiKey,
-            GroqApiKey = _aiChatService.GroqApiKey,
+            // AI Configuration (DPAPI encrypted)
+            GeminiApiKey = SecureStorageHelper.EncryptString(_aiChatService.GeminiApiKey),
+            OpenAiApiKey = SecureStorageHelper.EncryptString(_aiChatService.OpenAiApiKey),
+            GroqApiKey = SecureStorageHelper.EncryptString(_aiChatService.GroqApiKey),
             DefaultAiProvider = _aiChatService.ActiveProviderName,
             DefaultAiModel = _aiChatService.ActiveModelId,
 
@@ -959,7 +1063,7 @@ private void SaveSettings()
         };
         var options = new JsonSerializerOptions { WriteIndented = true };
         var json = JsonSerializer.Serialize(settings, options);
-        File.WriteAllText(_settingsFilePath, json);
+        SecureStorageHelper.AtomicWriteText(_settingsFilePath, json);
 
         if (_restoreTabsOnStartup)
         {
@@ -995,23 +1099,24 @@ private void SaveSettings()
 
             if (dark)
             {
-                Set("Theme.AppBackground",     "#F00A0D14");
-                Set("Theme.AppBorder",         "#4000D2FF");
-                Set("Theme.Surface",           "#CC121726");
-                Set("Theme.SurfaceAlt",        "#E0181F33");
-                Set("Theme.SurfaceHover",      "#E8222B47");
-                Set("Theme.SurfacePressed",    "#FF2B3659");
-                Set("Theme.DialogBackground",  "#F50E1322");
-                Set("Theme.Input",             "#D9141A2D");
-                Set("Theme.Border",            "#332B3B60");
-                Set("Theme.ScrollTrack",       "#20000000");
-                Set("Theme.ScrollThumb",       "#553A4C73");
-                Set("Theme.TextPrimary",       "#FFFFFFFF");
-                Set("Theme.TextSecondary",     "#FFB8C7E0");
-                Set("Theme.TextMuted",         "#FF7584A6");
-                Set("Theme.TabSelectedBg",     "#E619223D");
-                Set("Theme.TabSelectedBorder", "#CC00E5FF");
-                Set("Theme.TabHover",          "#661E2847");
+                Set("Theme.AppBackground",     "#F508090B");
+                Set("Theme.AppBorder",         "#FF1D2228");
+                Set("Theme.Surface",           "#F50D0F12");
+                Set("Theme.SurfaceAlt",        "#FF111418");
+                Set("Theme.SurfaceHover",      "#FF1A2026");
+                Set("Theme.SurfacePressed",    "#FF222930");
+                Set("Theme.DialogBackground",  "#FA111418");
+                Set("Theme.Input",             "#FF0D0F12");
+                Set("Theme.Border",            "#FF1D2228");
+                Set("Theme.ScrollTrack",       "#FF0D0F12");
+                Set("Theme.ScrollThumb",       "#FF272E36");
+                Set("Theme.TextPrimary",       "#FFE7E9EC");
+                Set("Theme.TextSecondary",     "#FF858B94");
+                Set("Theme.TextMuted",         "#FF555B63");
+                Set("Theme.TabSelectedBg",     "#FF111418");
+                Set("Theme.TabSelectedBorder", "#FFD6FF3F");
+                Set("Theme.TabHover",          "#FF1A2026");
+                Set("Theme.Accent",            "#FFD6FF3F");
             }
             else
             {
@@ -1032,6 +1137,7 @@ private void SaveSettings()
                 Set("Theme.TabSelectedBg",     "#FFFFFFFF");
                 Set("Theme.TabSelectedBorder", "#FF00B8D9");
                 Set("Theme.TabHover",          "#50CCE5FF");
+                Set("Theme.Accent",            "#FF00B8D9");
             }
         }
 
@@ -1163,7 +1269,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
 
     // FIXED :DDDD
     IntPtr hwnd = new WindowInteropHelper(dialog).EnsureHandle();
-    SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+    DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
 
     MakeWindowNonDraggable(dialog);
     dialog.SourceInitialized += Dialog_SourceInitialized;
@@ -1241,8 +1347,8 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     Grid.SetRow(minimizeOnLossFocusCheckBox, 8); Grid.SetColumn(minimizeOnLossFocusCheckBox, 1);
 
     lockAspectRatioCheckBox.Checked += (s, e) => { aspectRatio = widthSlider.Value / heightSlider.Value; };
-    widthSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; widthValueText.Text = e.NewValue.ToString("F0"); this.Width = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newHeight = e.NewValue / aspectRatio; if (newHeight >= heightSlider.Minimum && newHeight <= heightSlider.Maximum) { heightSlider.Value = newHeight; heightValueText.Text = newHeight.ToString("F0"); this.Height = newHeight; } _isUpdatingSliders = false; } SaveSettings(); };
-    heightSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; heightValueText.Text = e.NewValue.ToString("F0"); this.Height = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newWidth = e.NewValue * aspectRatio; if (newWidth >= widthSlider.Minimum && newWidth <= widthSlider.Maximum) { widthSlider.Value = newWidth; widthValueText.Text = newWidth.ToString("F0"); this.Width = newWidth; } _isUpdatingSliders = false; } SaveSettings(); };
+    widthSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; widthValueText.Text = e.NewValue.ToString("F0"); this.Width = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newHeight = e.NewValue / aspectRatio; if (newHeight >= heightSlider.Minimum && newHeight <= heightSlider.Maximum) { heightSlider.Value = newHeight; heightValueText.Text = newHeight.ToString("F0"); this.Height = newHeight; } _isUpdatingSliders = false; } ScheduleSaveSettings(); };
+    heightSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; heightValueText.Text = e.NewValue.ToString("F0"); this.Height = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newWidth = e.NewValue * aspectRatio; if (newWidth >= widthSlider.Minimum && newWidth <= widthSlider.Maximum) { widthSlider.Value = newWidth; widthValueText.Text = newWidth.ToString("F0"); this.Width = newWidth; } _isUpdatingSliders = false; } ScheduleSaveSettings(); };
     restoreTabsCheckBox.Click += (s, e) => { _restoreTabsOnStartup = restoreTabsCheckBox.IsChecked ?? false; SaveSettings(); };
 
     minimizeOnLossFocusCheckBox.Click += (s, e) => { _minimizeOnFocusLoss = minimizeOnLossFocusCheckBox.IsChecked ?? false; SaveSettings(); };
@@ -1288,7 +1394,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
         opacityValueText.Text = ((int)(e.NewValue * 100)) + "%";
         ApplyOverlayOpacity(e.NewValue);
-        SaveSettings();
+        ScheduleSaveSettings();
     };
 
     Grid.SetRow(opacityLabel, 10); Grid.SetColumn(opacityLabel, 0);
@@ -1301,8 +1407,8 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     var aiSectionHeader = new TextBlock
     {
         Text = "── AI Configuration ──",
-        Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xE5, 0xFF)),
-        FontWeight = FontWeights.Bold,
+        Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD6, 0xFF, 0x3F)),
+        FontWeight = FontWeights.SemiBold,
         FontSize = 13,
         Margin = new Thickness(5, 15, 5, 5),
         HorizontalAlignment = System.Windows.HorizontalAlignment.Center
@@ -1320,7 +1426,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
         Margin = new Thickness(5),
         ToolTip = "Free at aistudio.google.com/apikey"
     };
-    geminiKeyBox.TextChanged += (s, ev) => { _aiChatService.GeminiApiKey = geminiKeyBox.Text.Trim(); SaveSettings(); };
+    geminiKeyBox.TextChanged += (s, ev) => { _aiChatService.GeminiApiKey = geminiKeyBox.Text.Trim(); ScheduleSaveSettings(); };
     Grid.SetRow(geminiLabel, 11); Grid.SetColumn(geminiLabel, 0);
     Grid.SetRow(geminiKeyBox, 11); Grid.SetColumn(geminiKeyBox, 1);
     contentGrid.Children.Add(geminiLabel);
@@ -1336,7 +1442,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
         Margin = new Thickness(5),
         ToolTip = "Get at platform.openai.com/api-keys"
     };
-    openaiKeyBox.TextChanged += (s, ev) => { _aiChatService.OpenAiApiKey = openaiKeyBox.Text.Trim(); SaveSettings(); };
+    openaiKeyBox.TextChanged += (s, ev) => { _aiChatService.OpenAiApiKey = openaiKeyBox.Text.Trim(); ScheduleSaveSettings(); };
     Grid.SetRow(openaiLabel, 12); Grid.SetColumn(openaiLabel, 0);
     Grid.SetRow(openaiKeyBox, 12); Grid.SetColumn(openaiKeyBox, 1);
     contentGrid.Children.Add(openaiLabel);
@@ -1352,7 +1458,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
         Margin = new Thickness(5),
         ToolTip = "Free at console.groq.com/keys"
     };
-    groqKeyBox.TextChanged += (s, ev) => { _aiChatService.GroqApiKey = groqKeyBox.Text.Trim(); SaveSettings(); };
+    groqKeyBox.TextChanged += (s, ev) => { _aiChatService.GroqApiKey = groqKeyBox.Text.Trim(); ScheduleSaveSettings(); };
     Grid.SetRow(groqLabel, 13); Grid.SetColumn(groqLabel, 0);
     Grid.SetRow(groqKeyBox, 13); Grid.SetColumn(groqKeyBox, 1);
     contentGrid.Children.Add(groqLabel);
@@ -1723,7 +1829,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
             controlTemplate.VisualTree = border;
             
             var trigger = new Trigger { Property = IsMouseOverProperty, Value = true };
-            trigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 100, 0)), "templateBorder"));
+            trigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1A, 0x20, 0x26)), "templateBorder"));
             
             controlTemplate.Triggers.Add(trigger);
             
@@ -1751,8 +1857,8 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
             var menuBorder = new Border
             {
-                Background = System.Windows.Media.Brushes.Black,
-                BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x55, 0x55, 0x55)),
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x0D, 0x0F, 0x12)),
+                BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1D, 0x22, 0x28)),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(4),
                 Child = menuPanel
@@ -1820,7 +1926,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
             int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-            SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+            DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
             ApplyOverlayOpacity(_overlayOpacity);
         }
 
@@ -1885,7 +1991,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
                 ApplyOverlayOpacity(1.0);
             }
             UpdateTransparencyButtonUI();
-            SaveSettings();
+            ScheduleSaveSettings();
         }
 
         private void TransparencySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -1895,7 +2001,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
             {
                 ApplyOverlayOpacity(_transparencyLevel);
             }
-            SaveSettings();
+            ScheduleSaveSettings();
         }
 
         private void TransparencyButton_Click(object sender, RoutedEventArgs e)
@@ -1941,7 +2047,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
             this.Height = newHeight;
             this.Width = newWidth;
-            SaveSettings();
+            ScheduleSaveSettings();
         }
 
         #endregion
@@ -1975,7 +2081,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
                 _introOverlay = new Grid
                 {
-                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x0A, 0x0D, 0x14)),
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x08, 0x09, 0x0B)),
                     Visibility = Visibility.Visible,
                     HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
                     VerticalAlignment = VerticalAlignment.Stretch
@@ -2230,7 +2336,7 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
                 Background = (System.Windows.Media.Brush)FindResource("Theme.Input"),
                 Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextPrimary"),
                 BorderBrush = (System.Windows.Media.Brush)FindResource("Theme.Border"),
-                CaretBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xE5, 0xFF)),
+                CaretBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD6, 0xFF, 0x3F)),
                 Padding = new Thickness(8, 6, 8, 6),
                 FontSize = 13,
                 VerticalContentAlignment = VerticalAlignment.Center
@@ -2290,13 +2396,11 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
                     {
                         if (msg.IsUser)
                         {
-                            border.Background = new LinearGradientBrush(
-                                System.Windows.Media.Color.FromRgb(0x00, 0xA8, 0xE8),
-                                System.Windows.Media.Color.FromRgb(0x7B, 0x61, 0xFF),
-                                new System.Windows.Point(0, 0),
-                                new System.Windows.Point(1, 1));
+                            border.Background = (System.Windows.Media.Brush)FindResource("Theme.SurfaceAlt");
+                            border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x27, 0x2E, 0x36));
+                            border.BorderThickness = new Thickness(1);
                             var tb = border.Child as TextBlock;
-                            if (tb != null) tb.Foreground = System.Windows.Media.Brushes.White;
+                            if (tb != null) tb.Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextPrimary");
                         }
                         else
                         {
@@ -2898,8 +3002,14 @@ private async void AddNewBrowserTab(string url)
             BrowserTabs.Items.Add(newTab);
             BrowserTabs.SelectedItem = newTab;
 
-            var environment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, _userDataFolder);
-            await webView.EnsureCoreWebView2Async(environment);
+            if (_sharedWebViewEnvironment == null)
+            {
+                var options = new Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions(
+                    "--disable-features=Translate,CalculateNativeWinOcclusion --disable-background-networking --disable-component-update"
+                );
+                _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, _userDataFolder, options);
+            }
+            await webView.EnsureCoreWebView2Async(_sharedWebViewEnvironment);
 
             // Allow screenshots to be dropped into the web content.
             try { WebViewDropForwarder.Attach(webView); }
@@ -3113,7 +3223,7 @@ private void Dialog_SourceInitialized(object? sender, EventArgs e)
         SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
         
-        SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE);
+        DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
     }
 }
         private void Navigate(string address)

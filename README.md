@@ -46,9 +46,25 @@ Modern online technical hiring and proctored coding assessments have ruthless mo
 - Works across **Zoom, Google Meet, Microsoft Teams, Discord, OBS, and desktop screen recorders**.
 - Screen share me window bilkul gayab—the person viewing your screen only sees your IDE and coding platform underneath.
 
+### 🪟 Complete Transparency & Click-Through Ghost Mode (`Shift + T` / `Shift + Alt + T`)
+- **100% Invisible & Click-Through**: Instantly make the entire overlay completely transparent and click-through (`WS_EX_TRANSPARENT`).
+- Mouse clicks pass straight through the overlay directly into your active IDE or coding test as if nothing is there.
+- Press <kbd>Shift</kbd> + <kbd>T</kbd> (or <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>) again to instantly restore full opacity and interaction.
+- Also includes a precision floating opacity slider for adjustable semi-transparent reading.
+
+### 🛡️ Dynamic WinEvent Popup & Tooltip Anti-Leak Guard (`DisplayAffinityManager`)
+- Dynamic Windows hook (`SetWinEventHook` listening to `EVENT_OBJECT_SHOW`) automatically applies capture exclusion to all newly spawned popup HWNDs, tooltips, context menus, and combo boxes.
+- **Zero Leak Guarantee**: No accidental tooltip or menu pops up on the interviewer's screen share.
+- Automatically handles OS build compatibility (Windows 10 2004+ / Windows 11 `WDA_EXCLUDEFROMCAPTURE` with automatic fallback to `WDA_MONITOR` on older builds).
+
+### 🔒 Hardware-Bound DPAPI Security & Atomic Configs (`SecureStorageHelper`)
+- **Encrypted Credentials**: Your Gemini, OpenAI, and Groq API keys are encrypted at rest using Windows DPAPI (`ProtectedData.Protect` bound to the current Windows user). Zero plaintext API key leaks in config files.
+- **Atomic File Writes**: Settings updates are written to temporary files and atomically swapped, guaranteeing zero JSON file corruption during sudden system shutdowns, crashes, or power cuts.
+- Full backward compatibility for seamless migration from older plaintext configs.
+
 ### 🤖 Integrated Multi-Model AI Drawer
 - Built-in slide-out AI assistant drawer powered by your own API keys:
-  - **Google Gemini**: Fast, intelligent reasoning (`gemini-3.6-flash`, `gemini-1.5-flash`).
+  - **Google Gemini**: Fast, intelligent reasoning (`gemini-2.5-flash`, `gemini-1.5-flash`).
   - **OpenAI ChatGPT**: Industry-standard code explanations (`gpt-4o`, `gpt-4o-mini`).
   - **Groq Cloud**: Lightning-speed inference with `llama-3.1-70b` for instant code responses without waiting.
 - Ask questions, check edge cases, or look up syntax without leaving your coding window.
@@ -57,11 +73,13 @@ Modern online technical hiring and proctored coding assessments have ruthless mo
 - If you need the overlay gone in a split second, press <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>Z</kbd>.
 - The entire window instantly vanishes from your sight. Press it again to bring it right back.
 
-### 🪟 Complete Transparency & Ghost Mode (`Shift + T` / `Shift + Alt + T`)
-- Instantly make the entire overlay **100% transparent (invisible) and click-through**.
-- All mouse clicks pass directly through to your IDE or coding test underneath as if the overlay is not even there.
-- Press <kbd>Shift</kbd> + <kbd>T</kbd> (or <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>) again to instantly restore opacity and interaction.
-- Also includes a floating opacity slider for customizable semi-transparent reading.
+### 🚀 Hyper-Optimized WebView2 Engine
+- Shared browser environment instance eliminates redundant process overhead and speeds up tab creation.
+- Pre-configured browser engine flags (`--disable-features=Translate,CalculateNativeWinOcclusion --disable-background-networking --disable-component-update`) eliminate background network lag and stutter.
+
+### 🎨 Cyberpunk Stealth UI
+- Redesigned modern dark theme palette (`#08090B`, `#0D0F12`, `#14171C`) paired with electric lime stealth accents (`#D6FF3F`).
+- Crisp, distraction-free controls, sleek border highlights, and refined drop shadows designed for high-stress coding rounds.
 
 ### 🔇 1-Click Audio Silence (Global Mute)
 - Instant mute button to kill all audio across all tabs. No surprise sound leaks during live rounds.
@@ -83,12 +101,7 @@ Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. That's
 
 > [!TIP]
 > **No installation wizard. No .NET SDK required.** 
-> `Release/Oasyss Flux.exe` is completely self-contained (~79 MB) with the runtime and native libraries bundled inside.
-
----
-
-### 📦 GitHub Releases (Alternative 1-Click Link)
-When you publish this repo to GitHub, you can also attach `Oasyss Flux.exe` to a [GitHub Release](https://github.com/) tag so visitors can download it directly from the repo's homepage sidebar with a single click.
+> `Release/Oasyss Flux.exe` is completely self-contained (~83 MB) with the .NET 8 runtime and all native dependencies bundled inside.
 
 ---
 
@@ -116,7 +129,7 @@ When you publish this repo to GitHub, you can also attach `Oasyss Flux.exe` to a
    - **Google Gemini**: Get a free API key at [Google AI Studio](https://aistudio.google.com/apikey) *(Recommended: generous free tier)*.
    - **Groq Cloud**: Get a free ultra-fast key at [Groq Console](https://console.groq.com/keys) *(Fastest responses for live coding)*.
    - **OpenAI**: Get your API key from [OpenAI Platform](https://platform.openai.com/api-keys).
-4. Save settings and open the AI drawer whenever you need a quick code lookup.
+4. Save settings and open the AI drawer whenever you need a quick code lookup. Keys are automatically encrypted via DPAPI.
 
 ---
 
@@ -133,7 +146,7 @@ dotnet build -c Release
 dotnet run -c Release
 
 # To compile the exact standalone compressed single-file executable:
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:AssemblyName="Oasyss Flux" -o ./publish
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:AssemblyName="Oasyss Flux" -o ./Release
 ```
 
 ---
@@ -143,17 +156,19 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 ```
 oasyss-flux/
 ├── Release/
-│   └── Oasyss Flux.exe       # Standalone pre-built executable (download & run directly)
-├── AiChatService.cs          # Multi-provider AI brain (Gemini, ChatGPT, Groq)
-├── MainWindow.xaml / .cs     # Win32 ghost hooks, WebView2 tabs, opacity controls
-├── App.xaml / App.xaml.cs    # Application entry point & lifecycle
-├── AssemblyInfo.cs           # Assembly metadata
-├── WebViewDropForwarder.cs   # Tab drag-and-drop forwarder
-├── MyOverlayPOC.csproj       # .NET 8 WPF project file
-├── MyOverlayPOC.sln          # Solution file
-├── README.md                 # Complete documentation
-├── LICENSE                   # GPL-3.0 License
-└── Assets / Resources        # App icons, audio indicators, intro media
+│   └── Oasyss Flux.exe          # Standalone pre-built executable (download & run directly)
+├── AiChatService.cs             # Multi-provider AI brain (Gemini, ChatGPT, Groq)
+├── DisplayAffinityManager.cs    # Capture exclusion manager & WinEvent popup anti-leak hook
+├── SecureStorageHelper.cs       # Windows DPAPI encryption & atomic configuration storage
+├── MainWindow.xaml / .cs        # Win32 ghost hooks, WebView2 tabs, opacity controls, stealth UI
+├── App.xaml / App.xaml.cs       # Application entry point, unhandled exception logging
+├── AssemblyInfo.cs              # Assembly metadata
+├── WebViewDropForwarder.cs      # Tab drag-and-drop forwarder
+├── MyOverlayPOC.csproj          # .NET 8 WPF project file
+├── MyOverlayPOC.sln             # Solution file
+├── README.md                    # Complete documentation
+├── LICENSE                      # GPL-3.0 License
+└── Assets / Resources           # App icons, audio indicators, intro media
 ```
 
 ---

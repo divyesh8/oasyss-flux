@@ -31,5 +31,10 @@ Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 
-## Local user settings / test data
+## Local user settings, logs & test data
 *.local
+*.log
+startup.log
+*.tmp
+*.tmp.*
+*.zip
