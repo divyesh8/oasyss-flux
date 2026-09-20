@@ -1,0 +1,27 @@
+{
+  "name": "oasyss-flux",
+  "productName": "Oasyss Flux",
+  "version": "1.0.0",
+  "description": "Oasyss Flux — Divyesh Edition. Personal Security Research Utility.",
+  "main": "ui/macos/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/test-core.js",
+    "test:static": "node tests/test-static-bundle.js",
+    "test:artifact": "node tests/test-macos-artifact.js",
+    "test:permissions": "node tests/test-macos-permissions.js",
+    "test:keychain": "node tests/test-macos-keychain.js",
+    "test:all": "node tests/test-core.js && node tests/test-static-bundle.js",
+    "compile:helpers": "node scripts/compile-helpers.js",
+    "generate:icon": "python assets/macos/generate-icns.py",
+    "build:mac": "node scripts/build-macos.js",
+    "package:dmg": "bash scripts/package-dmg.sh"
+  },
+  "author": "Divyesh",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@electron/universal": "^3.0.6",
+    "electron": "^44.4.3",
+    "electron-packager": "^17.1.2"
+  }
+}

@@ -1,0 +1,114 @@
+/**
+ * Oasyss Flux — Divyesh Edition
+ * Shared Design System — Tokens & Theming
+ * Professional, restrained dark interface with quiet technical confidence.
+ */
+
+:root {
+  /* Color System — Dark Mode (Primary Visual Identity) */
+  --bg-primary: #08090B;
+  --bg-secondary: #0D0F12;
+  --bg-elevated: #111418;
+  --bg-input: #14171C;
+  --border-color: #1D2228;
+  --border-subtle: #161A20;
+
+  --text-primary: #E7E9EC;
+  --text-secondary: #858B94;
+  --text-muted: #555B63;
+
+  /* Accent: Used extremely sparingly */
+  --accent: #D6FF3F;
+  --accent-muted: rgba(214, 255, 63, 0.12);
+  --accent-border: rgba(214, 255, 63, 0.35);
+
+  /* Status Colors (Subdued) */
+  --status-ready: #858B94;
+  --status-active: #D6FF3F;
+  --status-paused: #E5A93C;
+  --status-stopped: #E05252;
+  --status-ok: #34D399;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", -system-ui, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
+
+  /* Geometry & Spacing */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+}
+
+/* Light Mode Palette (Systematic, High-Contrast, Accessible) */
+[data-theme="Light"],
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="Dark"]) {
+    --bg-primary: #F6F8FA;
+    --bg-secondary: #ECEFF2;
+    --bg-elevated: #FFFFFF;
+    --bg-input: #FFFFFF;
+    --border-color: #D0D7DE;
+    --border-subtle: #E1E4E8;
+
+    --text-primary: #1F2328;
+    --text-secondary: #57606A;
+    --text-muted: #8C959F;
+
+    --accent: #438000;
+    --accent-muted: rgba(67, 128, 0, 0.10);
+    --accent-border: rgba(67, 128, 0, 0.30);
+
+    --status-ready: #6E7781;
+    --status-active: #438000;
+    --status-paused: #B07400;
+    --status-stopped: #CF222E;
+    --status-ok: #1A7F37;
+  }
+}
+
+/* Forced Dark Override */
+[data-theme="Dark"] {
+  --bg-primary: #08090B;
+  --bg-secondary: #0D0F12;
+  --bg-elevated: #111418;
+  --bg-input: #14171C;
+  --border-color: #1D2228;
+  --border-subtle: #161A20;
+
+  --text-primary: #E7E9EC;
+  --text-secondary: #858B94;
+  --text-muted: #555B63;
+
+  --accent: #D6FF3F;
+  --accent-muted: rgba(214, 255, 63, 0.12);
+  --accent-border: rgba(214, 255, 63, 0.35);
+
+  --status-ready: #858B94;
+  --status-active: #D6FF3F;
+  --status-paused: #E5A93C;
+  --status-stopped: #E05252;
+  --status-ok: #34D399;
+}
+
+/* Accessibility: Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessibility: High Contrast / Reduced Transparency */
+@media (prefers-contrast: more) {
+  :root {
+    --border-color: #3D444D !important;
+    --border-subtle: #2D333B !important;
+  }
+}

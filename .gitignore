@@ -38,3 +38,8 @@ startup.log
 *.tmp
 *.tmp.*
 *.zip
+
+## Node / Electron build artifacts
+node_modules/
+dist/
+

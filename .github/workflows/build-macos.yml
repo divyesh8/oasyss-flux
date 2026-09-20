@@ -1,0 +1,139 @@
+name: Build & Package macOS (Universal DMG)
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-verify-macos:
+    name: Build, Verify & Package (macOS Universal)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (v20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      # ──────────────────────────────────────────────
+      #  Stage 1: Core Subsystem & Static Audit Tests
+      # ──────────────────────────────────────────────
+      - name: Run Core Subsystem Tests
+        run: node tests/test-core.js
+
+      - name: Run Static Bundle & Security Audit Tests
+        run: node tests/test-static-bundle.js
+
+      # ──────────────────────────────────────────────
+      #  Stage 2: Real macOS Hardware & Native Tests
+      # ──────────────────────────────────────────────
+      - name: Compile Native Swift Helpers (Universal ARM64 + x86_64)
+        run: node scripts/compile-helpers.js
+
+      - name: Run Real macOS Permissions (TCC) Query Test
+        run: node tests/test-macos-permissions.js
+
+      - name: Run Real macOS Keychain (Security.framework) Test
+        run: node tests/test-macos-keychain.js
+
+      # ──────────────────────────────────────────────
+      #  Stage 3: Build Universal macOS Application
+      # ──────────────────────────────────────────────
+      - name: Build Universal macOS Application (.app)
+        run: node scripts/build-macos.js --arch=universal
+
+      # ──────────────────────────────────────────────
+      #  Stage 4: Verify Artifact & Universal Architecture
+      # ──────────────────────────────────────────────
+      - name: Verify Application Bundle & Universal Mach-O Architecture
+        run: node tests/test-macos-artifact.js "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+
+      # ──────────────────────────────────────────────
+      #  Stage 5: Apple Code Signing (Conditional)
+      # ──────────────────────────────────────────────
+      - name: Code Signing (Apple Developer ID)
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            echo "Applying Developer ID signature with Hardened Runtime..."
+            codesign --deep --force --verify --verbose \
+              --options runtime \
+              --entitlements assets/macos/entitlements.mac.plist \
+              --sign "$APPLE_SIGNING_IDENTITY" \
+              "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+
+            echo "Verifying signature integrity..."
+            codesign --verify --deep --strict --verbose=2 "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
+            echo "✓ Code signing verified."
+          else
+            echo "ℹ️ SIGNING: NOT CONFIGURED (No Apple Developer ID configured in secrets). Continuing as Unsigned Validation Build."
+          fi
+
+      # ──────────────────────────────────────────────
+      #  Stage 6: Package & Validate DMG
+      # ──────────────────────────────────────────────
+      - name: Package & Validate Universal DMG
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          chmod +x scripts/package-dmg.sh
+          ./scripts/package-dmg.sh
+
+      # ──────────────────────────────────────────────
+      #  Stage 7: Notarization Verification
+      # ──────────────────────────────────────────────
+      - name: Verify Notarization Status
+        run: |
+          if [ -n "${{ secrets.APPLE_ID }}" ] && [ -n "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" ] && [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
+            echo "Validating notarization ticket..."
+            xcrun stapler validate "dist/Oasyss Flux — macOS Universal.dmg"
+            spctl --assess --type open --context context:primary-signature --verbose "dist/Oasyss Flux — macOS Universal.dmg"
+            echo "✓ Notarization validated."
+          else
+            echo "ℹ️ NOTARIZATION: NOT CONFIGURED. Artifact is ready for testing / unsigned distribution."
+          fi
+
+      # ──────────────────────────────────────────────
+      #  Stage 8: Checksum Generation & Artifact Packaging
+      # ──────────────────────────────────────────────
+      - name: Compress Universal .app for Distribution
+        run: |
+          cd dist
+          ditto -c -k --sequesterRsrc --keepParent "Oasyss Flux-darwin-universal/Oasyss Flux.app" "Oasyss Flux — macOS Universal.zip"
+
+      - name: Generate SHA-256 Checksums
+        run: |
+          cd dist
+          shasum -a 256 *.dmg *.zip > SHA256SUMS.txt
+          echo "=== Generated Checksums ==="
+          cat SHA256SUMS.txt
+
+      - name: Upload DMG, ZIP & Checksum Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: oasyss-flux-macos-universal-release
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          retention-days: 14

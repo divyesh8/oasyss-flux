@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      Apple Hardened Runtime Entitlements
+      Application: Oasyss Flux — Divyesh Edition
+      Bundle ID: com.divyesh.oasyssflux
+
+      Principle of Least Privilege Audit:
+      1. com.apple.security.cs.allow-jit:
+         REQUIRED by V8 JavaScript engine in Electron. Allows JIT compilation.
+         Removal causes immediate SIGKILL crash on launch under Hardened Runtime.
+
+      2. com.apple.security.cs.allow-unsigned-executable-memory:
+         REQUIRED by Electron/Node.js memory allocator for executable memory buffers.
+         Removal causes memory allocation failures during runtime execution.
+
+      3. com.apple.security.network.client:
+         REQUIRED for outbound HTTPS requests to authorized AI inference endpoints
+         (Google Gemini, OpenAI, Groq) in core/ai/AiChatService.js.
+
+      4. com.apple.security.files.user-selected.read-write:
+         REQUIRED for user-prompted log exports and configuration backups via native
+         file dialogs in core/logging/EventLogger.js.
+
+      NOTE: Screen recording is governed by macOS TCC (Transparency, Consent, and Control)
+      via NSScreenCaptureUsageDescription in Info.plist and CGPreflightScreenCaptureAccess(),
+      NOT by an entitlement. The invalid entitlement 'com.apple.security.device.screen-recording'
+      has been deliberately removed.
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+</dict>
+</plist>

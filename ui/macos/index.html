@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="Dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oasyss Flux — Divyesh Edition</title>
+  <link rel="stylesheet" href="../shared/design-system/tokens.css">
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      line-height: 1.4;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Native macOS Window Titlebar */
+    .macos-titlebar {
+      height: 38px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      -webkit-app-region: drag;
+      position: relative;
+      z-index: 100;
+    }
+
+    /* Authentic macOS Traffic Lights */
+    .traffic-lights {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+      margin-right: 18px;
+    }
+
+    .traffic-light {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 0.5px solid rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: bold;
+      color: rgba(0, 0, 0, 0.6);
+      transition: opacity var(--transition-fast);
+    }
+
+    .traffic-close { background: #FF5F56; }
+    .traffic-minimize { background: #FFBD2E; }
+    .traffic-zoom { background: #27C93F; }
+
+    .titlebar-center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .titlebar-badge {
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .titlebar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      -webkit-app-region: no-drag;
+    }
+
+    .titlebar-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      transition: all var(--transition-fast);
+    }
+
+    .titlebar-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .kbd-shortcut {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      padding: 1px 4px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      color: var(--text-muted);
+    }
+
+    /* Main Container Layout */
+    .app-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Modern macOS Sidebar */
+    .macos-sidebar {
+      width: 220px;
+      min-width: 220px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 10px 14px 10px;
+      gap: 6px;
+    }
+
+    .sidebar-header {
+      padding: 6px 10px 14px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 6px;
+    }
+
+    .sidebar-brand-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sidebar-brand-edition {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .sidebar-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast);
+    }
+
+    .nav-item:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .nav-item.active {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .nav-item.active .nav-icon {
+      color: var(--accent);
+    }
+
+    .nav-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      transition: color var(--transition-fast);
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 8px 6px;
+    }
+
+    /* Content Area */
+    .macos-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg-primary);
+      position: relative;
+    }
+
+    .view-panel {
+      display: none;
+      padding: 24px 30px;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 980px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .view-panel.active {
+      display: flex;
+    }
+
+    /* View Panel Fullscreen Mode (for Browser) */
+    .view-panel-full {
+      padding: 0;
+      max-width: 100%;
+      height: 100%;
+      gap: 0;
+    }
+
+    /* Header component */
+    .view-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .view-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-primary);
+    }
+
+    .view-subtitle {
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      margin-top: 3px;
+      font-weight: 500;
+    }
+
+    /* Status Pills Bar */
+    .status-bar-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-ready);
+    }
+
+    .status-dot.online, .status-dot.active, .status-dot.ok {
+      background: var(--status-active);
+      box-shadow: 0 0 6px var(--accent-muted);
+    }
+
+    .status-dot.paused { background: var(--status-paused); }
+    .status-dot.stopped { background: var(--status-stopped); }
+
+    /* Minimal Technical Cards */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .tech-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: border-color var(--transition-fast);
+    }
+
+    .tech-card:hover {
+      border-color: var(--text-muted);
+    }
+
+    .card-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .card-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    .card-meta {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    /* Action Buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 7px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      transition: all var(--transition-fast);
+    }
+
+    .btn:hover {
+      border-color: var(--text-muted);
+      background: var(--border-subtle);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #08090B;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .btn-accent:hover {
+      opacity: 0.9;
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+
+    .btn-danger {
+      border-color: var(--status-stopped);
+      color: var(--status-stopped);
+      background: transparent;
+    }
+
+    .btn-danger:hover {
+      background: rgba(224, 82, 82, 0.1);
+    }
+
+    /* Structured Technical Findings */
+    .findings-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .finding-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .finding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .finding-subsystem {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .finding-condition {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-muted);
+      color: var(--accent);
+      border: 1px solid var(--accent-border);
+    }
+
+    .finding-condition.simulated {
+      background: rgba(229, 169, 60, 0.12);
+      color: var(--status-paused);
+      border-color: rgba(229, 169, 60, 0.35);
+    }
+
+    .finding-details {
+      font-size: 11px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .finding-provenance {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Terminal Event Log */
+    .terminal-container {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      height: 480px;
+      overflow: hidden;
+    }
+
+    .terminal-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--bg-elevated);
+      gap: 10px;
+    }
+
+    .terminal-search {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 4px 8px;
+      flex: 1;
+      max-width: 260px;
+    }
+
+    .terminal-search input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      width: 100%;
+    }
+
+    .terminal-filter select {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      font-size: 11px;
+      padding: 4px 8px;
+      outline: none;
+    }
+
+    .terminal-stream {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.6;
+      background: var(--bg-primary);
+    }
+
+    .log-row {
+      display: flex;
+      gap: 10px;
+      padding: 2px 4px;
+      border-radius: 2px;
+      transition: background var(--transition-fast);
+    }
+
+    .log-row:hover {
+      background: var(--border-subtle);
+    }
+
+    .log-time { color: var(--text-muted); min-width: 60px; }
+    .log-level { min-width: 44px; font-weight: 600; }
+    .log-level.INFO { color: var(--text-secondary); }
+    .log-level.WARN { color: var(--status-paused); }
+    .log-level.SEC { color: var(--accent); }
+    .log-level.OK { color: var(--status-ok); }
+    .log-level.ERROR { color: var(--status-stopped); }
+    .log-source { color: var(--text-muted); min-width: 75px; }
+    .log-msg { color: var(--text-primary); flex: 1; word-break: break-all; }
+
+    /* Embedded Browser Subsystem */
+    .browser-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+      background: var(--bg-primary);
+    }
+
+    .browser-tabstrip {
+      display: flex;
+      align-items: center;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 4px 8px 0 8px;
+      gap: 4px;
+      overflow-x: auto;
+    }
+
+    .browser-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-bottom: none;
+      border-top-left-radius: var(--radius-sm);
+      border-top-right-radius: var(--radius-sm);
+      font-size: 11px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .browser-tab.active {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border-color: var(--border-color);
+      font-weight: 600;
+    }
+
+    .browser-tab-close {
+      cursor: pointer;
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 1px 3px;
+      border-radius: 50%;
+    }
+
+    .browser-tab-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .browser-new-tab {
+      padding: 4px 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 14px;
+      border-radius: var(--radius-sm);
+    }
+
+    .browser-new-tab:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .browser-nav-bar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+      gap: 8px;
+    }
+
+    .browser-nav-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      width: 26px;
+      height: 26px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .browser-nav-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .browser-address-input {
+      flex: 1;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+    }
+
+    .browser-address-input:focus {
+      border-color: var(--accent);
+    }
+
+    .browser-bookmarks-bar {
+      display: flex;
+      gap: 6px;
+      padding: 4px 12px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
+    }
+
+    .browser-bookmark-item {
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      cursor: pointer;
+      background: transparent;
+      border: 1px solid transparent;
+    }
+
+    .browser-bookmark-item:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+    }
+
+    .browser-viewport {
+      flex: 1;
+      background: #FFFFFF;
+      position: relative;
+      border: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Command Palette Floating Modal */
+    .palette-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: 100px;
+      z-index: 1000;
+    }
+
+    .palette-backdrop.active {
+      display: flex;
+    }
+
+    .palette-modal {
+      width: 540px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .palette-input-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .palette-input-box input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-primary);
+      font-size: 14px;
+      width: 100%;
+    }
+
+    .palette-list {
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .palette-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 12px;
+    }
+
+    .palette-item:hover, .palette-item.selected {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+    }
+
+    .palette-item.selected {
+      border: 1px solid var(--border-color);
+    }
+
+    /* Forms & Settings */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.04em;
+    }
+
+    .form-input {
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      outline: none;
+      transition: border-color var(--transition-fast);
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+    }
+
+    .permissions-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .permissions-table th {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .permissions-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    /* About view */
+    .about-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+    }
+
+    .about-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+
+    .about-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-primary);
+    }
+
+    .about-edition {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+    }
+
+    .about-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    .about-specs {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      padding: 8px 16px;
+      background: var(--bg-primary);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+    }
+
+    .about-sig {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- macOS Unified Window Titlebar -->
+  <header class="macos-titlebar">
+    <div class="traffic-lights">
+      <div class="traffic-light traffic-close" id="btnTrafficClose" title="Close"></div>
+      <div class="traffic-light traffic-minimize" id="btnTrafficMin" title="Minimize"></div>
+      <div class="traffic-light traffic-zoom" id="btnTrafficZoom" title="Zoom"></div>
+    </div>
+    <div class="titlebar-center">
+      <span>OASYSS FLUX</span>
+      <span class="titlebar-badge">DIVYESH EDITION</span>
+      <span style="color: var(--text-muted);">/</span>
+      <span id="headerViewTitle" style="color: var(--text-muted);">SYSTEM OVERVIEW</span>
+    </div>
+    <div class="titlebar-actions">
+      <button class="titlebar-btn" id="btnToggleGhost" title="Toggle Click-Through Ghost Mode (Shift+Cmd+T)">
+        <span>👻</span>
+        <span id="ghostStatusBadge" class="kbd-shortcut">GHOST OFF</span>
+      </button>
+      <button class="titlebar-btn" id="btnOpenPalette" title="Command Palette (⌘K)">
+        <span id="iconCommand"></span>
+        <span class="kbd-shortcut">⌘K</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <!-- macOS Sidebar -->
+    <aside class="macos-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand-title">
+          <span>OASYSS FLUX</span>
+        </div>
+        <div class="sidebar-brand-edition">DIVYESH EDITION</div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-view="overview">
+          <span class="nav-icon" id="navIconOverview"></span>
+          <span>Overview</span>
+        </a>
+        <a class="nav-item" data-view="browser">
+          <span class="nav-icon" id="navIconBrowser"></span>
+          <span>Browser</span>
+        </a>
+        <a class="nav-item" data-view="sessions">
+          <span class="nav-icon" id="navIconSessions"></span>
+          <span>Sessions</span>
+        </a>
+        <a class="nav-item" data-view="analysis">
+          <span class="nav-icon" id="navIconAnalysis"></span>
+          <span>Analysis</span>
+        </a>
+        <a class="nav-item" data-view="monitor">
+          <span class="nav-icon" id="navIconMonitor"></span>
+          <span>Monitor</span>
+        </a>
+        <a class="nav-item" data-view="profiles">
+          <span class="nav-icon" id="navIconProfiles"></span>
+          <span>Profiles</span>
+        </a>
+        <a class="nav-item" data-view="logs">
+          <span class="nav-icon" id="navIconLogs"></span>
+          <span>Event Log</span>
+        </a>
+
+        <div class="sidebar-divider"></div>
+
+        <a class="nav-item" data-view="settings">
+          <span class="nav-icon" id="navIconSettings"></span>
+          <span>Settings</span>
+        </a>
+        <a class="nav-item" data-view="about">
+          <span class="nav-icon" id="navIconAbout"></span>
+          <span>About</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main Content Panels -->
+    <main class="macos-content">
+      
+      <!-- 1. SYSTEM OVERVIEW -->
+      <section class="view-panel active" id="view-overview">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">SYSTEM OVERVIEW</h1>
+            <p class="view-subtitle">LOCAL SECURITY WORKSPACE / DIVYESH EDITION</p>
+          </div>
+          <div class="status-bar-pills">
+            <div class="status-pill"><span class="status-dot online"></span> SYSTEM ONLINE</div>
+            <div class="status-pill"><span class="status-dot" id="pillSessionDot"></span> <span id="pillSessionText">SESSION READY</span></div>
+            <div class="status-pill"><span class="status-dot ok"></span> ENGINE READY</div>
+            <div class="status-pill"><span class="status-dot ok"></span> PRIVACY LOCAL</div>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+          <div class="tech-card">
+            <span class="card-label">Active Environment</span>
+            <span class="card-value" id="dashEnv">macOS</span>
+            <span class="card-meta" id="dashArch">Apple Silicon / Intel</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Capture Exclusion</span>
+            <span class="card-value" style="color: var(--accent);" id="dashCaptureState">ACTIVE</span>
+            <span class="card-meta">NSWindowSharingNone (ScreenCaptureKit Excluded)</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Telemetry Pipeline</span>
+            <span class="card-value">DISABLED</span>
+            <span class="card-meta">Zero Outbound Telemetry</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Memory Footprint</span>
+            <span class="card-value" id="dashMemory">-- MB</span>
+            <span class="card-meta" id="dashPid">PID: --</span>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-accent" id="btnQuickStartSession">Start Session</button>
+          <button class="btn" id="btnQuickOpenBrowser">Open Browser</button>
+          <button class="btn" id="btnQuickRunAnalysis">Run Analysis</button>
+          <button class="btn" id="btnQuickViewLogs">View Event Log</button>
+        </div>
+      </section>
+
+      <!-- 2. EMBEDDED BROWSER -->
+      <section class="view-panel view-panel-full" id="view-browser">
+        <div class="browser-wrapper">
+          <!-- Tab Strip -->
+          <div class="browser-tabstrip" id="browserTabStrip">
+            <div class="browser-tab active" data-tab-id="1">
+              <span>Google</span>
+              <span class="browser-tab-close" title="Close Tab">&times;</span>
+            </div>
+            <button class="browser-new-tab" id="btnNewBrowserTab" title="New Tab (⌘T)">+</button>
+          </div>
+
+          <!-- Navigation Bar -->
+          <div class="browser-nav-bar">
+            <button class="browser-nav-btn" id="btnBrowserBack" title="Back">&larr;</button>
+            <button class="browser-nav-btn" id="btnBrowserForward" title="Forward">&rarr;</button>
+            <button class="browser-nav-btn" id="btnBrowserReload" title="Reload (⌘R)">&#x21bb;</button>
+            <input type="text" class="browser-address-input" id="browserAddressInput" placeholder="Search with Google or enter address...">
+            <button class="browser-nav-btn" id="btnBrowserMute" title="Global Audio Mute">🔊</button>
+          </div>
+
+          <!-- Quick Bookmarks Bar -->
+          <div class="browser-bookmarks-bar" id="browserBookmarksBar">
+            <span class="browser-bookmark-item" data-url="https://www.google.com">Google</span>
+            <span class="browser-bookmark-item" data-url="https://github.com">GitHub</span>
+            <span class="browser-bookmark-item" data-url="https://stackoverflow.com">StackOverflow</span>
+            <span class="browser-bookmark-item" data-url="https://leetcode.com">LeetCode</span>
+            <span class="browser-bookmark-item" data-url="https://developer.mozilla.org">MDN Web Docs</span>
+          </div>
+
+          <!-- Browser Viewport (Isolated Sandbox Frame) -->
+          <iframe class="browser-viewport" id="browserFrame" src="https://www.google.com" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
+        </div>
+      </section>
+
+      <!-- 3. SESSION WORKSPACE -->
+      <section class="view-panel" id="view-sessions">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">SESSION</h1>
+            <p class="view-subtitle">LOCAL / ACTIVE WORKSPACE</p>
+          </div>
+          <div class="status-bar-pills">
+            <div class="status-pill" id="sessionStatePill">
+              <span class="status-dot" id="sessionStateDot"></span>
+              <span id="sessionStateText">READY</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+          <div class="tech-card">
+            <span class="card-label">Session ID</span>
+            <span class="card-value" id="sessionValId">FLUX-INIT</span>
+            <span class="card-meta">Unique Local Workspace Instance</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Runtime</span>
+            <span class="card-value" id="sessionValRuntime">00:00:00</span>
+            <span class="card-meta">Active Elapsed Duration</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Isolation Level</span>
+            <span class="card-value">STRICT</span>
+            <span class="card-meta">Sandboxed Workspace Boundary</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Display Affinity</span>
+            <span class="card-value" style="color: var(--accent);">EXCLUDED</span>
+            <span class="card-meta">NSWindowSharingNone Active</span>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-accent" id="btnSessionStart">Start</button>
+          <button class="btn" id="btnSessionPause">Pause</button>
+          <button class="btn btn-danger" id="btnSessionStop">Stop</button>
+          <button class="btn" id="btnSessionReset">Reset</button>
+        </div>
+      </section>
+
+      <!-- 4. ANALYSIS WORKSPACE -->
+      <section class="view-panel" id="view-analysis">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">ANALYSIS</h1>
+            <p class="view-subtitle">AUTHORIZED SECURITY RESEARCH</p>
+          </div>
+          <button class="btn btn-accent" id="btnRunSecurityAnalysis">Run Security Analysis</button>
+        </div>
+
+        <div class="cards-grid" style="grid-template-columns: repeat(4, 1fr);">
+          <div class="tech-card">
+            <span class="card-label">Target</span>
+            <span class="card-value" style="font-size: 13px;">COMPOSITOR</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Environment</span>
+            <span class="card-value" style="font-size: 13px;" id="analysisEnv">DARWIN</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Process</span>
+            <span class="card-value" style="font-size: 13px;" id="analysisPid">PID_LOCAL</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Status</span>
+            <span class="card-value" style="font-size: 13px; color: var(--accent);" id="analysisStatus">READY</span>
+          </div>
+        </div>
+
+        <div class="findings-container" id="findingsContainer">
+          <!-- Populated dynamically with honest findings & simulations -->
+        </div>
+      </section>
+
+      <!-- 5. MONITOR -->
+      <section class="view-panel" id="view-monitor">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">SYSTEM MONITOR</h1>
+            <p class="view-subtitle">PROCESS METRICS & HARDWARE STATE</p>
+          </div>
+        </div>
+
+        <div class="cards-grid">
+          <div class="tech-card">
+            <span class="card-label">Process ID</span>
+            <span class="card-value" id="monPid">--</span>
+            <span class="card-meta">Current Execution Thread</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Heap Memory Used</span>
+            <span class="card-value" id="monHeapUsed">-- MB</span>
+            <span class="card-meta">V8 Runtime Heap Allocation</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Total RSS</span>
+            <span class="card-value" id="monRss">-- MB</span>
+            <span class="card-meta">Resident Set Size in RAM</span>
+          </div>
+          <div class="tech-card">
+            <span class="card-label">Capture State</span>
+            <span class="card-value" style="color: var(--accent);" id="monCaptureState">PROTECTED</span>
+            <span class="card-meta">NSWindowSharingNone Enabled</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. PROFILES -->
+      <section class="view-panel" id="view-profiles">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">RESEARCH PROFILES</h1>
+            <p class="view-subtitle">ENVIRONMENT TEST PRESETS</p>
+          </div>
+        </div>
+
+        <div class="findings-container">
+          <div class="finding-card">
+            <div class="finding-header">
+              <span class="finding-subsystem">PROFILE: STANDARD ASSESSMENT</span>
+              <span class="finding-condition">ACTIVE</span>
+            </div>
+            <p class="finding-details">Capture exclusion enabled, local storage encryption enforced, zero telemetry, default opacity 1.0.</p>
+          </div>
+          <div class="finding-card">
+            <div class="finding-header">
+              <span class="finding-subsystem">PROFILE: HARDENED RESEARCH</span>
+              <span class="finding-condition" style="background: var(--border-color); color: var(--text-secondary); border-color: transparent;">INACTIVE</span>
+            </div>
+            <p class="finding-details">Strict display exclusion, global audio silence, tooltip anti-leak guard, ephemeral session logging.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. TERMINAL EVENT LOG -->
+      <section class="view-panel" id="view-logs">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">EVENT LOG</h1>
+            <p class="view-subtitle">TERMINAL-INSPIRED AUDIT STREAM</p>
+          </div>
+        </div>
+
+        <div class="terminal-container">
+          <div class="terminal-toolbar">
+            <div class="terminal-search">
+              <span id="searchIcon"></span>
+              <input type="text" id="logSearchInput" placeholder="Filter logs...">
+            </div>
+            <div class="terminal-filter">
+              <select id="logLevelSelect">
+                <option value="ALL">ALL LEVELS</option>
+                <option value="INFO">INFO</option>
+                <option value="WARN">WARN</option>
+                <option value="SEC">SEC</option>
+                <option value="OK">OK</option>
+                <option value="ERROR">ERROR</option>
+              </select>
+            </div>
+            <div class="btn-row" style="gap: 6px;">
+              <button class="btn" id="btnCopyLogs" title="Copy to clipboard"><span id="iconCopy"></span> Copy</button>
+              <button class="btn" id="btnExportLogs" title="Export as text"><span id="iconExport"></span> Export</button>
+              <button class="btn" id="btnClearLogs" title="Clear buffer"><span id="iconClear"></span> Clear</button>
+            </div>
+          </div>
+          <div class="terminal-stream" id="terminalStream">
+            <!-- Populated dynamically with log entries -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. SETTINGS -->
+      <section class="view-panel" id="view-settings">
+        <div class="view-header">
+          <div>
+            <h1 class="view-title">SETTINGS</h1>
+            <p class="view-subtitle">CONFIGURATION & SECURITY PREFERENCES</p>
+          </div>
+          <button class="btn btn-accent" id="btnSaveSettings">Save Preferences</button>
+        </div>
+
+        <!-- Appearance -->
+        <div class="tech-card">
+          <span class="card-label">System Appearance</span>
+          <div class="btn-row" style="margin-top: 6px;">
+            <button class="btn" id="btnThemeSystem" data-theme-btn="System">System</button>
+            <button class="btn" id="btnThemeDark" data-theme-btn="Dark">Dark</button>
+            <button class="btn" id="btnThemeLight" data-theme-btn="Light">Light</button>
+          </div>
+        </div>
+
+        <!-- AI Configuration (Keychain Encrypted) -->
+        <div class="tech-card">
+          <span class="card-label">Multi-Model AI Configuration (Apple Keychain / Encrypted Storage)</span>
+          <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+            <div class="form-group">
+              <label class="form-label">Google Gemini API Key</label>
+              <input type="password" class="form-input" id="cfgGeminiKey" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">OpenAI API Key</label>
+              <input type="password" class="form-input" id="cfgOpenAiKey" placeholder="sk-proj-...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Groq Cloud API Key</label>
+              <input type="password" class="form-input" id="cfgGroqKey" placeholder="gsk_...">
+            </div>
+          </div>
+        </div>
+
+        <!-- Permissions & Security -->
+        <div class="tech-card">
+          <span class="card-label">macOS Permissions Audit (Real TCC Subsystem Status)</span>
+          <table class="permissions-table" style="margin-top: 8px;">
+            <thead>
+              <tr>
+                <th>Capability</th>
+                <th>Required For</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="permissionsTableBody">
+              <!-- Populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Privacy Section -->
+        <div class="tech-card">
+          <span class="card-label">Privacy Verification</span>
+          <div class="status-bar-pills" style="margin-top: 8px;">
+            <div class="status-pill"><span class="status-dot ok"></span> DATA MODE: LOCAL ONLY</div>
+            <div class="status-pill"><span class="status-dot ok"></span> NETWORK: CONTROLLED</div>
+            <div class="status-pill"><span class="status-dot ok"></span> TELEMETRY: DISABLED</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 9. ABOUT -->
+      <section class="view-panel" id="view-about">
+        <div class="about-box">
+          <div class="about-logo">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+              <path d="M2 12h20"/>
+            </svg>
+          </div>
+          <div class="about-title">OASYSS FLUX</div>
+          <div class="about-edition">DIVYESH EDITION</div>
+          <p class="about-desc">
+            Personal Security Research Utility engineered for local assessment, authorized screen capture verification, and multi-model research assistance.
+          </p>
+          <div class="about-specs">
+            <span>Version: 1.0.0</span>
+            <span>•</span>
+            <span>Platform: macOS</span>
+            <span>•</span>
+            <span id="aboutArch">Architecture: Apple Silicon (arm64) / Intel (x86_64)</span>
+            <span>•</span>
+            <span>Build: LOCAL</span>
+          </div>
+          <div class="about-sig">Designed & engineered by Divyesh</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Command Palette Floating Panel (⌘ + K) -->
+  <div class="palette-backdrop" id="paletteBackdrop">
+    <div class="palette-modal">
+      <div class="palette-input-box">
+        <span id="paletteSearchIcon"></span>
+        <input type="text" id="paletteInput" placeholder="Search commands... (Press Esc to close)">
+      </div>
+      <div class="palette-list" id="paletteList">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script src="../shared/design-system/icons.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>
