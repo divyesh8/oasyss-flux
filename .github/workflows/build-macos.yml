@@ -12,6 +12,9 @@ jobs:
   build-and-verify-macos:
     name: Build, Verify & Package (macOS Universal)
     runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: oasyss-flux-macos
 
     steps:
       - name: Checkout Repository
@@ -22,6 +25,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+          cache-dependency-path: oasyss-flux-macos/package-lock.json
 
       - name: Install Dependencies
         run: |
@@ -133,7 +137,7 @@ jobs:
         with:
           name: oasyss-flux-macos-universal-release
           path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/SHA256SUMS.txt
+            oasyss-flux-macos/dist/*.dmg
+            oasyss-flux-macos/dist/*.zip
+            oasyss-flux-macos/dist/SHA256SUMS.txt
           retention-days: 14

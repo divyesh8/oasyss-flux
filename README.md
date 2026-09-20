@@ -6,11 +6,11 @@
 
 ### **The Stealth Overlay & AI Companion for Online Interviews & Coding Assessments**
 *Bypass screen sharing. Zero tab-switch alerts. Instant AI syntax & code clutch.*
-*Now native on both **Windows 11** and **macOS (Universal 2: Apple Silicon + Intel)**.*
+*Now cleanly separated into dedicated **Windows** and **macOS** packages.*
 
-[![Platform Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-blue.svg?logo=windows)](https://microsoft.com/windows)
-[![Platform macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%26%20Intel-black.svg?logo=apple)](https://github.com/divyesh8/oasyss-flux/actions)
-[![Stealth](https://img.shields.io/badge/Capture%20Exclusion-WDA%20%2F%20NSWindowSharingNone-red.svg)](#-capture-exclusion--screen-share-invisibility)
+[![Platform Windows](https://img.shields.io/badge/Windows-10%20%2F%2011%20x64-blue.svg?logo=windows)](#-windows-edition-oasyss-flux-windows)
+[![Platform macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%26%20Intel-black.svg?logo=apple)](#-macos-edition-oasyss-flux-macos)
+[![Stealth](https://img.shields.io/badge/Capture%20Exclusion-WDA%20%2F%20NSWindowSharingNone-red.svg)](#-key-features)
 [![Setup](https://img.shields.io/badge/Downloads-.exe%20%26%20.dmg-brightgreen.svg)](#-downloads--quick-start)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green.svg)](LICENSE)
 
@@ -43,59 +43,85 @@ Modern online technical hiring and proctored coding assessments have ruthless mo
 
 ---
 
+## 📂 Repository Organization
+
+The repository is cleanly divided into two dedicated, independent operating system directories:
+
+```
+oasyss-flux/
+├── oasyss-flux-windows/                 # 🪟 Windows 10/11 WPF (.NET 8) Application
+│   ├── Release/
+│   │   └── Oasyss Flux.exe              # Standalone pre-built executable (~83 MB)
+│   ├── MyOverlayPOC.sln                 # Visual Studio Solution
+│   ├── MyOverlayPOC.csproj              # .NET 8 Project file
+│   ├── MainWindow.xaml / .cs            # Stealth overlay UI, tabs & ghost mode
+│   ├── DisplayAffinityManager.cs        # WDA_EXCLUDEFROMCAPTURE engine
+│   ├── SecureStorageHelper.cs           # Windows DPAPI encryption
+│   ├── AiChatService.cs                 # Multi-model AI client (Gemini, Groq, OpenAI)
+│   └── README.md                        # Windows-specific documentation & build guide
+│
+├── oasyss-flux-macos/                   # 🍏 macOS Universal 2 (Apple Silicon + Intel) Application
+│   ├── core/                            # Shared core engine, session state & AI services
+│   ├── platform/macos/                  # NSWindowSharingNone & Keychain adapters
+│   ├── ui/                              # Hardened Electron UI & preload bridge
+│   ├── assets/macos/                    # AppIcon.icns, Info.plist & Swift helpers
+│   ├── scripts/                         # Universal packaging (ARM64 + x64) & DMG scripts
+│   ├── tests/                           # Core subsystem & static bundle test suites
+│   ├── docs/                            # Checklists, signing guide & release manifests
+│   └── README.md                        # macOS-specific documentation & build guide
+│
+├── .github/workflows/build-macos.yml    # Automated 8-stage macOS CI/CD pipeline
+├── README.md                            # Main project overview & index
+└── LICENSE                              # GNU General Public License v3.0
+```
+
+---
+
 ## 📥 Downloads & Quick Start
 
-Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. Pre-compiled, standalone release packages are ready to download for both Windows and macOS:
+Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. Pre-compiled, standalone release packages are ready to download:
 
-### 🍏 macOS (Apple Silicon M1/M2/M3/M4 & Intel x86_64)
+### 🪟 Windows Edition ([`oasyss-flux-windows/`](oasyss-flux-windows/))
+
+1. Go directly to **[`oasyss-flux-windows/Release/`](oasyss-flux-windows/Release/)**.
+2. Download [**`Oasyss Flux.exe`**](oasyss-flux-windows/Release/Oasyss%20Flux.exe).
+3. Double-click **`Oasyss Flux.exe`**.
+4. *Bas, khel khatam!* No installation wizard, no .NET SDK needed (~83 MB self-contained).
+
+### 🍏 macOS Edition ([`oasyss-flux-macos/`](oasyss-flux-macos/))
+
+Universal 2 binary for **Apple Silicon (M1/M2/M3/M4)** and **Intel (x86_64)**:
 
 | Artifact | Architecture | Download Link |
 | :--- | :--- | :--- |
 | **`Oasyss Flux — macOS Universal.dmg`** | Universal 2 (`arm64` + `x86_64`) | [**Download via GitHub Actions Artifacts**](https://github.com/divyesh8/oasyss-flux/actions/runs/35506874748/artifacts/10604406146) |
 | **`Oasyss Flux — macOS Universal.zip`** | Universal 2 (`arm64` + `x86_64`) | [**Download via GitHub Actions Artifacts**](https://github.com/divyesh8/oasyss-flux/actions/runs/35506874748/artifacts/10604406146) |
 
-#### 🛠️ macOS Setup & Installation (3 Steps):
-
-1. **Mount & Install**:
-   - Double-click `Oasyss Flux — macOS Universal.dmg`.
-   - Drag **`Oasyss Flux.app`** into your **`/Applications`** folder.
+#### 🛠️ macOS Setup (3 Steps):
+1. **Mount & Install**: Open the DMG and drag **`Oasyss Flux.app`** to **`/Applications`**.
 2. **First Launch (Gatekeeper Quarantine Bypass)**:
-   - Because this is an open-source development/validation build, macOS Gatekeeper may display a warning: *"Apple could not verify that it is free of malware."*
-   - **Quick Terminal Fix (Recommended)**:
-     ```bash
-     xattr -cr "/Applications/Oasyss Flux.app"
-     ```
-   - **Or via Finder**: In `/Applications`, right-click (or Control-click) `Oasyss Flux.app`, choose **Open**, then click **Open** in the confirmation dialog.
-3. **Permissions (Optional / As Needed)**:
-   - **Screen Recording**: Required to verify capture exclusion against the display compositor. Enable in `System Settings → Privacy & Security → Screen Recording`.
-   - **Accessibility**: Needed only if global panic hotkeys are used outside app focus (`System Settings → Privacy & Security → Accessibility`).
-
----
-
-### 🪟 Windows (Windows 10 / 11 x64)
-
-1. Go directly to the **[`Release/`](Release/)** folder in this repository.
-2. Download [**`Release/Oasyss Flux.exe`**](Release/Oasyss%20Flux.exe).
-3. Double-click **`Oasyss Flux.exe`**.
-4. *Bas, khel khatam!* No installation wizard, no .NET SDK needed (~83 MB self-contained).
+   ```bash
+   xattr -cr "/Applications/Oasyss Flux.app"
+   ```
+   *(Or in Finder: Right-click `Oasyss Flux.app` → Open → Click Open).*
+3. **Permissions**: Enable **Screen Recording** in `System Settings → Privacy & Security → Screen Recording` to allow display compositor capture exclusion verification.
 
 ---
 
 ## 🔥 Key Features
 
 ### 👻 Capture Exclusion & Screen-Share Invisibility
-- **Windows**: Low-level display affinity (`WDA_EXCLUDEFROMCAPTURE`).
-- **macOS**: Native WindowServer sharing exclusion (`NSWindowSharingNone`).
+- **Windows**: Win32 `WDA_EXCLUDEFROMCAPTURE` API.
+- **macOS**: Native Quartz compositor `NSWindowSharingNone`.
 - Works across **Zoom, Google Meet, Microsoft Teams, Discord, OBS, and desktop screen recorders**.
-- Screen share me window bilkul gayab—the person viewing your screen only sees your IDE and coding platform underneath.
+- The interviewer only sees your IDE and coding platform underneath.
 
 ### 🪟 Complete Transparency & Click-Through Ghost Mode
 - **100% Invisible & Click-Through**: Instantly make the entire overlay completely transparent and click-through.
 - **Shortcuts**:
-  - **macOS**: <kbd>Shift</kbd> + <kbd>⌘ Cmd</kbd> + <kbd>T</kbd> (or <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>)
+  - **macOS**: <kbd>Shift</kbd> + <kbd>⌘ Cmd</kbd> + <kbd>T</kbd>
   - **Windows**: <kbd>Shift</kbd> + <kbd>T</kbd> (or <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd>)
-- Mouse clicks pass straight through the overlay directly into your active IDE or coding test as if nothing is there.
-- Press the shortcut again to restore full opacity and interaction. Includes a floating HUD indicator.
+- Mouse clicks pass straight through the overlay directly into your active IDE or coding test as if nothing is there. Press the shortcut again to restore.
 
 ### 🌐 Embedded Sandboxed Web Browser
 - Built-in multi-tab web browser that floats over your test environment.
@@ -107,26 +133,7 @@ Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. Pre-co
   - **Google Gemini**: Fast, intelligent reasoning (`gemini-2.5-flash`, `gemini-1.5-flash`).
   - **Groq Cloud**: Lightning-speed inference with `llama-3.1-70b` for instant code responses without waiting.
   - **OpenAI ChatGPT**: Industry-standard code explanations (`gpt-4o`, `gpt-4o-mini`).
-- Ask questions, check edge cases, or look up syntax without leaving your coding window.
-
-### 🔒 Hardware-Bound Credential Encryption & Atomic Configs
-- **macOS**: Credentials stored securely in Apple Keychain (`Security.framework`) under service `com.divyesh.oasyssflux` via native Swift helper.
-- **Windows**: Credentials encrypted at rest using Windows DPAPI (`ProtectedData.Protect`).
-- **Atomic File Swapping**: Settings updates are written to temporary files and atomically swapped, guaranteeing zero JSON corruption during crashes.
-
-### ⌨️ Command Palette (<kbd>⌘ Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>K</kbd>)
-- Floating command palette supporting fuzzy search for instant workspace switching, running security diagnostics, exporting logs, or toggling ghost mode.
-
-### 📜 Monospace Terminal Event Log
-- Real-time timestamped event stream (`SF Mono` / `JetBrains Mono`).
-- Search bar, severity filtering (`ALL`, `INFO`, `WARN`, `SEC`, `OK`, `ERROR`), log clearing, clipboard copy, and plain text / JSON export.
-
-### 🎨 Cyberpunk Stealth UI & System Themes
-- Restrained modern dark palette (`#08090B`, `#0D0F12`) with electric lime accents (`#D6FF3F`).
-- Accessible, high-contrast light mode (`#F6F8FA`) and automatic macOS System Appearance following.
-
-### 🔇 1-Click Audio Silence (Global Mute)
-- Instant mute button to kill all audio across all tabs. No surprise sound leaks during live rounds.
+- Keys are encrypted with **macOS Keychain** or **Windows DPAPI**.
 
 ---
 
@@ -137,10 +144,7 @@ Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. Pre-co
 | <kbd>Shift</kbd> + <kbd>⌘</kbd> + <kbd>T</kbd> | <kbd>Shift</kbd> + <kbd>T</kbd> | **Ghost Mode**: Toggle Click-Through & Transparency |
 | <kbd>⌘</kbd> + <kbd>K</kbd> | <kbd>Ctrl</kbd> + <kbd>K</kbd> | **Command Palette**: Quick Search & Actions |
 | <kbd>⌘</kbd> + <kbd>,</kbd> | <kbd>Ctrl</kbd> + <kbd>,</kbd> | Open Settings |
-| <kbd>⌘</kbd> + <kbd>1</kbd> | <kbd>Ctrl</kbd> + <kbd>1</kbd> | Switch to Overview Workspace |
-| <kbd>⌘</kbd> + <kbd>2</kbd> | <kbd>Ctrl</kbd> + <kbd>2</kbd> | Switch to Sessions Workspace |
-| <kbd>⌘</kbd> + <kbd>3</kbd> | <kbd>Ctrl</kbd> + <kbd>3</kbd> | Switch to Security Analysis Workspace |
-| <kbd>⌘</kbd> + <kbd>4</kbd> | <kbd>Ctrl</kbd> + <kbd>4</kbd> | Switch to Event Log Workspace |
+| <kbd>⌘</kbd> + <kbd>1</kbd> - <kbd>4</kbd> | <kbd>Ctrl</kbd> + <kbd>1</kbd> - <kbd>4</kbd> | Switch Workspaces |
 | <kbd>⌘</kbd> + <kbd>T</kbd> | <kbd>Ctrl</kbd> + <kbd>T</kbd> | Open New Browser Tab |
 | <kbd>⌘</kbd> + <kbd>W</kbd> | <kbd>Ctrl</kbd> + <kbd>W</kbd> | Close Active Tab |
 | <kbd>⌘</kbd> + <kbd>R</kbd> | <kbd>Ctrl</kbd> + <kbd>R</kbd> / <kbd>F5</kbd> | Refresh Web Page |
@@ -148,21 +152,9 @@ Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. Pre-co
 
 ---
 
-## 🔑 AI Key Setup (Free Keys)
-
-1. Open **Settings** (⚙️) via sidebar or press <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>,</kbd>.
-2. Navigate to the **AI Configuration** section.
-3. Add your free API key:
-   - **Google Gemini**: Get a free key at [Google AI Studio](https://aistudio.google.com/apikey) *(Recommended: generous free tier)*.
-   - **Groq Cloud**: Get an ultra-fast key at [Groq Console](https://console.groq.com/keys) *(Fastest responses for live coding)*.
-   - **OpenAI**: Get your key from [OpenAI Platform](https://platform.openai.com/api-keys).
-4. Click Save. Keys are immediately encrypted via macOS Keychain or Windows DPAPI.
-
----
-
 ## 🔐 Cryptographic Checksums (SHA-256)
 
-Verified release hashes generated on the macOS CI runner (`shasum -a 256`):
+Verified release hashes from macOS CI runner:
 
 ```text
 29ef9bbfa1d35daabd0fefdd90954983f1d6f59c20483e9d4616a10395d87d2a  Oasyss Flux — macOS Universal.dmg
@@ -174,99 +166,33 @@ Verified release hashes generated on the macOS CI runner (`shasum -a 256`):
 
 ## 🛠️ For Developers (Build from Source)
 
-### Building on macOS:
-```bash
-# 1. Install dependencies
-npm install
-
-# 2. Run automated tests
-npm test
-npm run test:static
-
-# 3. Compile native Swift helpers (Universal arm64 + x86_64)
-npm run compile:helpers
-
-# 4. Package Universal macOS Application (.app)
-npm run build:mac
-
-# 5. Verify application bundle architecture
-node tests/test-macos-artifact.js "dist/Oasyss Flux-darwin-universal/Oasyss Flux.app"
-
-# 6. Package and mount-test DMG
-npm run package:dmg
-```
-
-### Building on Windows:
+### Building the Windows Edition:
 ```powershell
-# Prerequisites: .NET 8.0 SDK installed
+cd oasyss-flux-windows
 dotnet restore
 dotnet build -c Release
-
-# To compile standalone compressed single-file executable:
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:AssemblyName="Oasyss Flux" -o ./Release
 ```
 
----
-
-## 📂 Project Structure
-
-```
-oasyss-flux/
-├── core/                                # Shared JavaScript core application logic
-│   ├── application/AppEngine.js         # Subsystem coordinator & lifecycle manager
-│   ├── session/SessionManager.js        # Deterministic session state machine & timer
-│   ├── analysis/SecurityAnalysisEngine.js # Technical audits with provenance metadata
-│   ├── configuration/FluxConfig.js      # Atomic JSON configuration persistence
-│   ├── logging/EventLogger.js           # Terminal-style event logging & export
-│   └── ai/AiChatService.js              # Multi-model AI client (Gemini, OpenAI, Groq)
-├── platform/
-│   ├── macos/MacPlatformAdapter.js      # macOS paths, menus, Keychain & permissions
-│   ├── macos/MacDisplayProtectionAdapter.js # NSWindowSharingNone capture exclusion
-│   └── windows/WindowsPlatformAdapter.cs # Windows WDA_EXCLUDEFROMCAPTURE & DPAPI
-├── ui/
-│   ├── macos/main.js                    # Electron main process & security hardening
-│   ├── macos/preload.js                 # Context-isolated IPC bridge
-│   ├── macos/renderer.js                # UI controller, tabs, shortcuts, theme engine
-│   └── macos/index.html                 # Traffic lights, sidebar, workspaces, command palette
-├── assets/macos/
-│   ├── AppIcon.icns                     # 11-resolution native macOS icon (889 KB)
-│   ├── extend-info.plist                # Privacy usage descriptions & bundle metadata
-│   ├── entitlements.mac.plist           # Hardened Runtime least-privilege entitlements
-│   └── helpers/                         # Native Swift helpers (TCC & Keychain)
-├── scripts/
-│   ├── build-macos.js                   # Universal 2 macOS packaging pipeline
-│   ├── compile-helpers.js               # Swift helper universal compilation script
-│   └── package-dmg.sh                   # DMG packaging & mount validation script
-├── tests/                               # Automated verification suites
-│   ├── test-core.js                     # Core subsystem unit tests (8/8)
-│   ├── test-static-bundle.js            # Bundle & security static audit
-│   ├── test-macos-artifact.js           # Mach-O architecture & lipo verification
-│   ├── test-macos-keychain.js           # Real Apple Security.framework tests
-│   └── test-macos-permissions.js        # Real Apple TCC permissions query tests
-├── .github/workflows/build-macos.yml    # 8-stage automated macOS CI/CD pipeline
-├── docs/                                # Technical release documentation
-│   ├── RELEASE_ARTIFACTS.md             # Release artifact manifest & SHA-256 hashes
-│   ├── MACOS_BUILD_AND_SIGNING.md       # Build, signing & notarization guide
-│   ├── MACOS_TEST_CHECKLIST.md          # Hardware runtime validation checklist
-│   └── MACOS_AUDIT.md                   # Architecture audit & status matrix
-├── Release/
-│   └── Oasyss Flux.exe                  # Standalone Windows executable
-└── README.md                            # Comprehensive cross-platform documentation
+### Building the macOS Edition:
+```bash
+cd oasyss-flux-macos
+npm install
+npm test
+npm run compile:helpers
+npm run build:mac
+npm run package:dmg
 ```
 
 ---
 
-## 📜 License
+## 📄 License & Attribution
 
 Distributed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENSE](LICENSE) for details.
 
----
+<br/>
 
 <div align="center">
-
-**Built for candidates and coders who believe in smart work over panic. Interview clear karo, tension mat lo. Zero scene, pure clutch.**
-
-<br/>
 
 **If this saved your technical round or coding assessment, don't forget to drop a ⭐ on this repo!**
 
