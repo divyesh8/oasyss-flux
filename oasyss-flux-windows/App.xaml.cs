@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Windows;
 
@@ -10,54 +9,30 @@ namespace MyOverlayPOC;
 /// </summary>
 public partial class App : Application
 {
-    private static string GetLogFilePath()
-    {
-        try
-        {
-            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OasyssFlux", "logs");
-            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            return Path.Combine(dir, "startup.log");
-        }
-        catch
-        {
-            return Path.Combine(Path.GetTempPath(), "oasyssflux_startup.log");
-        }
-    }
-
-    private static void SafeLog(string message)
-    {
-        try
-        {
-            File.AppendAllText(GetLogFilePath(), $"[{DateTime.UtcNow:O}] {message}\n");
-        }
-        catch
-        {
-            Debug.WriteLine(message);
-        }
-    }
-
     protected override void OnStartup(StartupEventArgs e)
     {
         try
         {
-            SafeLog("App.OnStartup called");
+            File.AppendAllText("startup.log", $"[{DateTime.Now}] App.OnStartup called\n");
             
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
-                SafeLog($"AppDomain UnhandledException: {args.ExceptionObject}");
+                File.AppendAllText("startup.log", $"[{DateTime.Now}] AppDomain UnhandledException: {args.ExceptionObject}\n");
             };
 
             DispatcherUnhandledException += (s, args) =>
             {
-                SafeLog($"DispatcherUnhandledException: {args.Exception.Message}");
+                File.AppendAllText("startup.log", $"[{DateTime.Now}] DispatcherUnhandledException: {args.Exception}\n");
             };
 
             base.OnStartup(e);
-            SafeLog("base.OnStartup completed");
+            File.AppendAllText("startup.log", $"[{DateTime.Now}] base.OnStartup completed\n");
         }
         catch (Exception ex)
         {
-            SafeLog($"OnStartup caught exception: {ex.Message}");
+            File.AppendAllText("startup.log", $"[{DateTime.Now}] OnStartup caught: {ex}\n");
         }
     }
 }
+
+

@@ -1,0 +1,35 @@
+## Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+publish/
+publish-single/
+publish-compressed/
+publish-pure-single/
+
+## Visual Studio cache & user files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.ide/
+
+## Large binaries
+*.dll
+*.pdb
+
+# Allow the pre-built standalone executable in Release/
+!Release/Oasyss Flux.exe
+/Oasyss Flux.exe
+
+## OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+## Local user settings / test data
+*.local
