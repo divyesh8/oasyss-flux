@@ -44,6 +44,21 @@ Modern online technical hiring and proctored coding assessments enforce strict s
 
 ## 🔥 Key Features
 
+### ⚡ Undetectable Small AI Tab (`Shift + C`) • by div
+- **1-Click Window Transformation**: Press <kbd>Shift</kbd> + <kbd>C</kbd> anytime to transform the overlay into an ultra-compact, floating Google AI tab signed **"by div"**.
+- **100% Undetectable by Any Other Applications**:
+  - Uses native Windows display capture affinity (`WDA_EXCLUDEFROMCAPTURE`) to ensure the tab is completely invisible to **OBS Studio, Zoom, MS Teams, Discord, Google Meet, Windows Snipping Tool, PrintScreen, and Proctoring Software** (Honorlock, Proctorio, SEB).
+  - Invisible in **Alt + Tab**, Windows Task Switcher, and explicitly hidden from the Windows Taskbar (`WS_EX_TOOLWINDOW` and COM `ITaskbarList::DeleteTab`).
+- **Google AI Search Bar (Zero Sign-In • No Login • No API Keys Required)**:
+  - Built-in Chrome-styled Google AI omnibox with real-time Google search suggestions and author signature badge (`by div`).
+  - **Direct On-Tab Answers (Zero Random Links)**: Delivers full, structured, rich AI explanations directly inside the same tab right there—no placeholder redirects or random web links.
+  - Type any question, code doubt, or math calculation (`25 * 48`, `sqrt(144)`) for instant synthesized answers.
+  - **Sleek & Compact**: Scaled down to a discreet 460px width floating pill that never obstructs your workspace.
+  - **Pure Search Bar Experience**: No other tabs or companion windows open—strictly the minimal, floating search bar with direct instant answers.
+  - **Instant Transparent Ghost Mode (<kbd>Shift</kbd> + <kbd>T</kbd>)**: Press <kbd>Shift</kbd> + <kbd>T</kbd> to make the search bar instantly 100% invisible and click-through. **Works even while your cursor is actively typing in the search box.** Press <kbd>Shift</kbd> + <kbd>T</kbd> again to restore immediately.
+  - Includes 1-Click **Google Lens (`📷`)** screen capture with native offline OCR.
+  - Press <kbd>Shift</kbd> + <kbd>C</kbd> or <kbd>Esc</kbd> anytime to smoothly restore back to the full overlay window.
+
 ### 📷 Google Lens (1-Click Screen Capture & Visual Analysis)
 - **1-Click Whole Screen Capture**: Press <kbd>Shift</kbd> + <kbd>L</kbd> or click the camera icon (`📷`) in the Chrome top bar, Omnibox, or AI input bar.
 - **Direct Visual Doubt Resolution**: Takes a 100% native monitor resolution capture and automatically attaches it to your chat input. Type your doubt (e.g. *"Solve question 3"*, *"What does this error mean?"*, *"Explain this code"*) and press Enter.
@@ -113,6 +128,7 @@ Pata hai interview se pehle SDKs install karne ka tension nahi lena hota. That's
 
 | Shortcut | Action |
 |---|---|
+| <kbd>Shift</kbd> + <kbd>C</kbd> | **Undetectable Small AI Tab**: Transform into floating Google AI search bar (Zero login • No API key) |
 | <kbd>Shift</kbd> + <kbd>B</kbd> | **Toggle Browser Mode**: Switch between Google Chrome disguise & Flux Dashboard |
 | <kbd>Shift</kbd> + <kbd>L</kbd> | **Google Lens**: 1-Click Whole Screen Capture & Ask AI Doubts |
 | <kbd>Shift</kbd> + <kbd>T</kbd> / <kbd>Shift</kbd> + <kbd>Alt</kbd> + <kbd>T</kbd> | **Complete Transparency**: 100% Invisible & Click-Through Toggle |

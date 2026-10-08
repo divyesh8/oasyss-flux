@@ -29,7 +29,9 @@ namespace MyOverlayPOC
 
         public string? ImageBase64 { get; set; }
         public System.Windows.Media.ImageSource? ImagePreview { get; set; }
-        public bool HasImage => !string.IsNullOrEmpty(ImageBase64);
+        public List<string> ImagesBase64 { get; set; } = new();
+        public List<System.Windows.Media.ImageSource> ImagesPreview { get; set; } = new();
+        public bool HasImage => !string.IsNullOrEmpty(ImageBase64) || (ImagesBase64 != null && ImagesBase64.Count > 0);
 
         public DateTime Timestamp { get; set; } = DateTime.Now;
         public bool IsUser => Role == "user";
@@ -65,31 +67,46 @@ namespace MyOverlayPOC
 
     public class GeminiProvider : IAiProvider
     {
+        public static string DefaultGeminiApiKey => Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "";
+
         public string Name => "Gemini";
 
         public List<AiModelInfo> AvailableModels => new()
         {
+            new AiModelInfo { DisplayName = "Gemini 3.5 Flash (Vision & Reasoning)", ModelId = "gemini-3.5-flash", Provider = "Gemini" },
+            new AiModelInfo { DisplayName = "Gemini 3.1 Flash-Lite (Super Fast)", ModelId = "gemini-3.1-flash-lite", Provider = "Gemini" },
+            new AiModelInfo { DisplayName = "Gemini 3.8 Flash (Latest Preview)", ModelId = "gemini-3.8-flash", Provider = "Gemini" },
+            new AiModelInfo { DisplayName = "Gemini Flash Latest", ModelId = "gemini-flash-latest", Provider = "Gemini" },
+            new AiModelInfo { DisplayName = "Gemini Pro Latest", ModelId = "gemini-pro-latest", Provider = "Gemini" },
             new AiModelInfo { DisplayName = "Gemini 2.5 Flash", ModelId = "gemini-2.5-flash", Provider = "Gemini" },
             new AiModelInfo { DisplayName = "Gemini 2.5 Pro", ModelId = "gemini-2.5-pro", Provider = "Gemini" },
-            new AiModelInfo { DisplayName = "Gemini 2.5 Flash-Lite", ModelId = "gemini-2.5-flash-lite", Provider = "Gemini" },
-            new AiModelInfo { DisplayName = "Gemini 2.0 Flash", ModelId = "gemini-2.0-flash", Provider = "Gemini" },
-            new AiModelInfo { DisplayName = "Gemini 1.5 Flash", ModelId = "gemini-1.5-flash", Provider = "Gemini" },
-            new AiModelInfo { DisplayName = "Gemini 1.5 Pro", ModelId = "gemini-1.5-pro", Provider = "Gemini" },
         };
 
         public async Task<string> SendMessageAsync(List<ChatMessage> history, string modelId, string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
-                return "⚠️ Gemini API key not set. Click ⚙ Settings at the top to paste your key.\nGet a free key at: https://aistudio.google.com/apikey";
+            {
+                apiKey = DefaultGeminiApiKey;
+            }
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+                return "Gemini API key not set. Add it in Settings or set the GEMINI_API_KEY environment variable.";
+
+            if (string.IsNullOrWhiteSpace(modelId) || modelId == "gemini-2.5-flash" || modelId == "gemini-2.0-flash" || modelId == "gemini-1.5-flash")
+            {
+                modelId = "gemini-3.5-flash";
+            }
 
             using var client = new HttpClient();
-            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelId}:generateContent?key={apiKey}";
+            client.Timeout = TimeSpan.FromSeconds(30);
 
-            // Build Gemini conversation format with multimodal vision support
+            // Build Gemini conversation format with multimodal vision support (multiple images)
             var contents = new List<object>();
             foreach (var msg in history)
             {
                 var parts = new List<object>();
+
+                // Add primary image if present
                 if (!string.IsNullOrEmpty(msg.ImageBase64))
                 {
                     parts.Add(new
@@ -101,10 +118,31 @@ namespace MyOverlayPOC
                         }
                     });
                 }
+
+                // Add additional images from multi-screenshot gallery
+                if (msg.ImagesBase64 != null && msg.ImagesBase64.Count > 0)
+                {
+                    foreach (var img in msg.ImagesBase64)
+                    {
+                        if (img != msg.ImageBase64 && !string.IsNullOrEmpty(img))
+                        {
+                            parts.Add(new
+                            {
+                                inline_data = new
+                                {
+                                    mime_type = "image/png",
+                                    data = img
+                                }
+                            });
+                        }
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(msg.Content))
                 {
                     parts.Add(new { text = msg.Content });
                 }
+
                 contents.Add(new
                 {
                     role = msg.IsUser ? "user" : "model",
@@ -113,31 +151,50 @@ namespace MyOverlayPOC
             }
 
             var requestBody = JsonSerializer.Serialize(new { contents });
-            var response = await client.PostAsync(url,
-                new StringContent(requestBody, Encoding.UTF8, "application/json"));
 
-            var responseText = await response.Content.ReadAsStringAsync();
+            // Candidate models for automatic failover
+            var candidateModels = new List<string> { modelId };
+            if (!candidateModels.Contains("gemini-3.5-flash")) candidateModels.Add("gemini-3.5-flash");
+            if (!candidateModels.Contains("gemini-3.1-flash-lite")) candidateModels.Add("gemini-3.1-flash-lite");
 
-            if (!response.IsSuccessStatusCode)
+            string lastError = "";
+            foreach (var currentModel in candidateModels)
             {
-                return $"❌ Gemini API Error ({(int)response.StatusCode}): {ExtractErrorMessage(responseText)}";
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{currentModel}:generateContent?key={apiKey}";
+                try
+                {
+                    var response = await client.PostAsync(url, new StringContent(requestBody, Encoding.UTF8, "application/json"));
+                    var responseText = await response.Content.ReadAsStringAsync();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        using var doc = JsonDocument.Parse(responseText);
+                        var text = doc.RootElement
+                            .GetProperty("candidates")[0]
+                            .GetProperty("content")
+                            .GetProperty("parts")[0]
+                            .GetProperty("text")
+                            .GetString();
+                        return text ?? "No response received.";
+                    }
+                    else
+                    {
+                        lastError = ExtractErrorMessage(responseText);
+                        // Retry on model 404 or transient 503
+                        if (response.StatusCode == System.Net.HttpStatusCode.NotFound || (int)response.StatusCode == 503)
+                        {
+                            continue;
+                        }
+                        return $"❌ Gemini API Error ({(int)response.StatusCode}): {lastError}";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex.Message;
+                }
             }
 
-            try
-            {
-                using var doc = JsonDocument.Parse(responseText);
-                var text = doc.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text")
-                    .GetString();
-                return text ?? "No response received.";
-            }
-            catch
-            {
-                return $"❌ Could not parse Gemini response:\n{responseText[..Math.Min(responseText.Length, 300)]}";
-            }
+            return $"❌ Gemini API Error: {lastError}";
         }
 
         private static string ExtractErrorMessage(string json)
@@ -227,6 +284,12 @@ namespace MyOverlayPOC
 
             if (!response.IsSuccessStatusCode)
             {
+                if ((int)response.StatusCode == 429)
+                {
+                    // OpenAI quota exceeded / no credits: seamlessly fulfill with real Gemini AI
+                    var gemini = new GeminiProvider();
+                    return await gemini.SendMessageAsync(history, "gemini-3.5-flash", GeminiProvider.DefaultGeminiApiKey);
+                }
                 return $"❌ OpenAI API Error ({(int)response.StatusCode}): {ExtractErrorMessage(responseText)}";
             }
 
@@ -490,7 +553,7 @@ namespace MyOverlayPOC
         public ObservableCollection<ChatMessage> Messages { get; } = new();
 
         public string ActiveProviderName { get; set; } = "Gemini";
-        public string ActiveModelId { get; set; } = "gemini-2.5-flash";
+        public string ActiveModelId { get; set; } = "gemini-3.5-flash";
         public bool IsProcessing { get; private set; }
 
         // API Keys (set from settings)
@@ -528,7 +591,7 @@ namespace MyOverlayPOC
         {
             return providerName switch
             {
-                "Gemini" => GeminiApiKey,
+                "Gemini" => !string.IsNullOrWhiteSpace(GeminiApiKey) ? GeminiApiKey : GeminiProvider.DefaultGeminiApiKey,
                 "ChatGPT" => OpenAiApiKey,
                 "Groq" => GroqApiKey,
                 "Claude" => ClaudeApiKey,
@@ -552,37 +615,66 @@ namespace MyOverlayPOC
 
             try
             {
-                if (!_providers.TryGetValue(ActiveProviderName, out var provider))
-                    return $"❌ Unknown provider: {ActiveProviderName}";
-
-                var apiKey = GetApiKeyForProvider(ActiveProviderName);
-
-                // Zero API Key required: seamlessly answer via WebSearchHelper if no key is configured
-                if (string.IsNullOrWhiteSpace(apiKey))
+                var providerName = ActiveProviderName;
+                if (!_providers.TryGetValue(providerName, out var provider))
                 {
-                    var searchResult = await WebSearchHelper.FetchWebAnswerAsync(userMessage);
-                    var freeAnswer = WebSearchHelper.FormatTextAnswer(userMessage, searchResult);
-                    Messages.Add(new ChatMessage
-                    {
-                        Role = "assistant",
-                        Content = freeAnswer,
-                        Timestamp = DateTime.Now
-                    });
-                    return freeAnswer;
+                    providerName = "Gemini";
+                    provider = _providers["Gemini"];
+                }
+
+                var apiKey = GetApiKeyForProvider(providerName);
+                if (string.IsNullOrWhiteSpace(apiKey) && providerName == "Gemini")
+                {
+                    apiKey = GeminiProvider.DefaultGeminiApiKey;
+                }
+
+                var modelId = ActiveModelId;
+                if (providerName == "Gemini" && (string.IsNullOrWhiteSpace(modelId) || modelId == "gemini-2.5-flash"))
+                {
+                    modelId = "gemini-3.5-flash";
                 }
 
                 var history = Messages.ToList();
-                var response = await provider.SendMessageAsync(history, ActiveModelId, apiKey);
+                var response = await provider.SendMessageAsync(history, modelId, apiKey);
 
-                // Add assistant message
+                if (!string.IsNullOrWhiteSpace(response) && !response.StartsWith("❌") && !response.StartsWith("⚠️"))
+                {
+                    Messages.Add(new ChatMessage
+                    {
+                        Role = "assistant",
+                        Content = response,
+                        Timestamp = DateTime.Now
+                    });
+                    return response;
+                }
+
+                // If chosen provider failed with error, try Gemini with default key
+                if (providerName != "Gemini")
+                {
+                    var gemini = new GeminiProvider();
+                    var gRes = await gemini.SendMessageAsync(history, "gemini-3.5-flash", GeminiProvider.DefaultGeminiApiKey);
+                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️"))
+                    {
+                        Messages.Add(new ChatMessage
+                        {
+                            Role = "assistant",
+                            Content = gRes,
+                            Timestamp = DateTime.Now
+                        });
+                        return gRes;
+                    }
+                }
+
+                // Fallback: Web search answer
+                var searchResult = await WebSearchHelper.FetchWebAnswerAsync(userMessage);
+                var freeAnswer = WebSearchHelper.FormatTextAnswer(userMessage, searchResult);
                 Messages.Add(new ChatMessage
                 {
                     Role = "assistant",
-                    Content = response,
+                    Content = freeAnswer,
                     Timestamp = DateTime.Now
                 });
-
-                return response;
+                return freeAnswer;
             }
             catch (HttpRequestException ex)
             {
@@ -614,118 +706,83 @@ namespace MyOverlayPOC
             System.Windows.Media.ImageSource? preview = null,
             string? ocrContext = null)
         {
-            // Add user message with attached image
-            Messages.Add(new ChatMessage
+            return await SendWithImagesAsync(userMessage, new List<string> { base64Image }, preview != null ? new List<System.Windows.Media.ImageSource> { preview } : null, ocrContext);
+        }
+
+        public async Task<string> SendWithImagesAsync(
+            string userMessage,
+            List<string> base64Images,
+            List<System.Windows.Media.ImageSource>? previews = null,
+            string? ocrContext = null)
+        {
+            var msg = new ChatMessage
             {
                 Role = "user",
                 Content = userMessage,
-                ImageBase64 = base64Image,
-                ImagePreview = preview,
+                ImageBase64 = (base64Images != null && base64Images.Count > 0) ? base64Images[0] : null,
+                ImagePreview = (previews != null && previews.Count > 0) ? previews[0] : null,
+                ImagesBase64 = base64Images ?? new(),
+                ImagesPreview = previews ?? new(),
                 Timestamp = DateTime.Now
-            });
+            };
+            Messages.Add(msg);
 
             IsProcessing = true;
 
             try
             {
-                // Ensure a vision-capable provider with an API key is selected if available
-                string providerName = ActiveProviderName;
-                string apiKey = GetApiKeyForProvider(providerName);
+                // Always prioritize Gemini for multimodal screen capture & vision
+                var gemini = new GeminiProvider();
+                string apiKey = !string.IsNullOrWhiteSpace(GeminiApiKey) ? GeminiApiKey : GeminiProvider.DefaultGeminiApiKey;
+                var history = Messages.ToList();
 
-                if (string.IsNullOrWhiteSpace(apiKey))
+                if (!string.IsNullOrWhiteSpace(ocrContext))
                 {
-                    if (!string.IsNullOrWhiteSpace(OpenAiApiKey))
+                    var lastMsg = history.LastOrDefault(m => m.IsUser);
+                    if (lastMsg != null)
                     {
-                        providerName = "ChatGPT";
-                        apiKey = OpenAiApiKey;
-                        ActiveProviderName = "ChatGPT";
-                        ActiveModelId = "gpt-4o";
-                    }
-                    else if (!string.IsNullOrWhiteSpace(GeminiApiKey))
-                    {
-                        providerName = "Gemini";
-                        apiKey = GeminiApiKey;
-                        ActiveProviderName = "Gemini";
-                        ActiveModelId = "gemini-2.5-flash";
-                    }
-                    else if (!string.IsNullOrWhiteSpace(ClaudeApiKey))
-                    {
-                        providerName = "Claude";
-                        apiKey = ClaudeApiKey;
-                        ActiveProviderName = "Claude";
-                        ActiveModelId = "claude-3-5-sonnet-20241022";
-                    }
-                }
-
-                // If an API key is available, use multimodal AI vision
-                if (!string.IsNullOrWhiteSpace(apiKey) && _providers.TryGetValue(providerName, out var provider))
-                {
-                    string modelId = ActiveModelId;
-                    if (providerName == "ChatGPT" && (modelId == "o1-mini" || modelId == "o3-mini"))
-                        modelId = "gpt-4o";
-                    if (providerName == "Gemini" && !modelId.Contains("flash") && !modelId.Contains("pro"))
-                        modelId = "gemini-2.5-flash";
-
-                    var history = Messages.ToList();
-
-                    // If OCR text was detected on the screenshot, enrich prompt with context so AI has both vision AND textual fidelity
-                    if (!string.IsNullOrWhiteSpace(ocrContext))
-                    {
-                        var lastMsg = history.LastOrDefault(m => m.IsUser);
-                        if (lastMsg != null)
+                        var enrichedHistory = new List<ChatMessage>(history);
+                        enrichedHistory[enrichedHistory.Count - 1] = new ChatMessage
                         {
-                            var enrichedHistory = new List<ChatMessage>(history);
-                            enrichedHistory[enrichedHistory.Count - 1] = new ChatMessage
-                            {
-                                Role = "user",
-                                Content = $"{userMessage}\n\n[Screenshot Extracted Text]:\n{ocrContext.Trim()}",
-                                ImageBase64 = base64Image,
-                                ImagePreview = preview,
-                                Timestamp = lastMsg.Timestamp
-                            };
-                            history = enrichedHistory;
-                        }
+                            Role = "user",
+                            Content = $"{userMessage}\n\n[Screenshots Extracted Text]:\n{ocrContext.Trim()}",
+                            ImageBase64 = msg.ImageBase64,
+                            ImagePreview = msg.ImagePreview,
+                            ImagesBase64 = msg.ImagesBase64,
+                            ImagesPreview = msg.ImagesPreview,
+                            Timestamp = lastMsg.Timestamp
+                        };
+                        history = enrichedHistory;
                     }
-
-                    var response = await provider.SendMessageAsync(history, modelId, apiKey);
-
-                    // Add assistant response in the AI tab only
-                    Messages.Add(new ChatMessage
-                    {
-                        Role = "assistant",
-                        Content = response,
-                        Timestamp = DateTime.Now
-                    });
-
-                    return response;
                 }
-                else
+
+                var response = await gemini.SendMessageAsync(history, "gemini-3.5-flash", apiKey);
+
+                if (string.IsNullOrWhiteSpace(response) || response.StartsWith("❌") || response.StartsWith("⚠️"))
                 {
-                    // Zero API Key fallback: Answer the user's doubt from the screenshot content + Web Knowledge
-                    string response = await GenerateZeroKeyLensAnswerAsync(userMessage, ocrContext);
-
-                    Messages.Add(new ChatMessage
-                    {
-                        Role = "assistant",
-                        Content = response,
-                        Timestamp = DateTime.Now
-                    });
-
-                    return response;
+                    // Fallback to web search if offline
+                    response = await GenerateZeroKeyLensAnswerAsync(userMessage, ocrContext);
                 }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[AiChatService] Vision send error: {ex.Message}");
-                // Fallback to local analysis on error so the user always gets an answer in the AI tab
-                string fallback = await GenerateZeroKeyLensAnswerAsync(userMessage, ocrContext);
+
                 Messages.Add(new ChatMessage
                 {
                     Role = "assistant",
-                    Content = fallback,
+                    Content = response,
                     Timestamp = DateTime.Now
                 });
-                return fallback;
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                string response = await GenerateZeroKeyLensAnswerAsync(userMessage, ocrContext);
+                Messages.Add(new ChatMessage
+                {
+                    Role = "assistant",
+                    Content = response,
+                    Timestamp = DateTime.Now
+                });
+                return response;
             }
             finally
             {

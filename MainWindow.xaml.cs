@@ -247,8 +247,8 @@ public class AppSettings
         private Border _webViewContentOverlay;
 private readonly Dictionary<string, HashSet<CoreWebView2PermissionKind>> _grantedPermissions = new Dictionary<string, HashSet<CoreWebView2PermissionKind>>();
         private const int WS_EX_LAYERED = 0x00080000;
-        private const int WS_EX_TOOLWINDOW = 0x00000080;
-        private const int WS_EX_APPWINDOW = 0x00040000;
+        internal const int WS_EX_TOOLWINDOW = 0x00000080;
+        internal const int WS_EX_APPWINDOW = 0x00040000;
         internal const int WS_EX_TRANSPARENT = 0x00000020;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
         private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
@@ -328,6 +328,7 @@ private System.Windows.Controls.Button? _chromeCloseBtn;
 private Border? _browserToolbarBorder;
 private StackPanel? _cyberToolbarTools;
 private AiChatWindow? _aiChatWindow;
+private MiniAiTabWindow? _miniAiTabWindow;
 private bool _isBrowserFullScreen = false;
 private Rect _preFullScreenBounds;
 
@@ -389,11 +390,6 @@ private bool _minimizeOnFocusLoss = true;
         private bool _isCompletelyTransparent = false;
         private double _savedOpacityBeforeCompleteTransparency = 1.0;
         private DateTime _lastShiftTPressTime = DateTime.MinValue;
-
-        // Startup Intro Video
-        private Grid? _introOverlay;
-        private MediaElement? _introMedia;
-        private bool _introFinished = false;
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -482,8 +478,6 @@ private bool _minimizeOnFocusLoss = true;
                 newRootGrid.Children.Add(originalContent);
             }
             newRootGrid.Children.Add(_modalOverlay);
-
-            InitializeIntroVideo(newRootGrid);
 
             // Background usage tracker removed to guarantee zero background telemetry.
 
@@ -913,6 +907,16 @@ private void ToggleProgrammaticMinimize()
             {
                 _topModeToggleButton.Click += (s, ev) => ToggleBrowserMode();
             }
+            var miniAiTabBtn = template.FindName("MiniAiTabButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (miniAiTabBtn != null)
+            {
+                miniAiTabBtn.Click += (s, ev) => ToggleMiniAiTab();
+            }
+            var btnTopMiniAi = template.FindName("BtnTopMiniAi", BrowserTabs) as System.Windows.Controls.Button;
+            if (btnTopMiniAi != null)
+            {
+                btnTopMiniAi.Click += (s, ev) => ToggleMiniAiTab();
+            }
             var btnSidebarToggle = template.FindName("BtnSidebarToggleBrowserMode", BrowserTabs) as System.Windows.Controls.Button;
             if (btnSidebarToggle != null)
             {
@@ -1305,6 +1309,50 @@ private void ToggleProgrammaticMinimize()
                 }
                 _aiChatWindow.ToggleCompleteTransparency();
             }
+        }
+
+        public void ToggleMiniAiTab()
+        {
+            if (_miniAiTabWindow != null && _miniAiTabWindow.IsVisible)
+            {
+                _miniAiTabWindow.Hide();
+                this.Visibility = Visibility.Visible;
+                if (this.WindowState == WindowState.Minimized)
+                {
+                    this.WindowState = WindowState.Normal;
+                }
+                this.Activate();
+            }
+            else
+            {
+                // Ensure no other companion windows or tabs are open (ONLY the search bar)
+                if (_aiChatWindow != null && _aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Hide();
+                }
+
+                // Hide main window completely so only the search bar is present
+                this.Visibility = Visibility.Hidden;
+
+                if (_miniAiTabWindow == null)
+                {
+                    _miniAiTabWindow = new MiniAiTabWindow(_aiChatService);
+                }
+
+                _miniAiTabWindow.Show();
+                if (_miniAiTabWindow.IsCompletelyTransparent)
+                {
+                    _miniAiTabWindow.ToggleCompleteTransparency();
+                }
+                _miniAiTabWindow.PositionAtTopCenter();
+                _miniAiTabWindow.Activate();
+                _miniAiTabWindow.FocusSearchBox();
+            }
+        }
+
+        private void MiniAiTabButton_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMiniAiTab();
         }
 
         private bool _initialTabsLoaded = false;
@@ -1877,6 +1925,14 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     contentGrid.Children.Add(ghostHotkeyLabel);
     contentGrid.Children.Add(ghostHotkeyValue);
 
+    contentGrid.RowDefinitions.Insert(17, new RowDefinition { Height = GridLength.Auto });
+    var miniAiHotkeyLabel = new System.Windows.Controls.Label { Content = "Undetectable AI Tab:", Style = (Style)FindResource("DialogLabelStyle") };
+    var miniAiHotkeyValue = new TextBlock { Text = "Shift + C (Instant Google AI • No Login)", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    Grid.SetRow(miniAiHotkeyLabel, 17); Grid.SetColumn(miniAiHotkeyLabel, 0);
+    Grid.SetRow(miniAiHotkeyValue, 17); Grid.SetColumn(miniAiHotkeyValue, 1);
+    contentGrid.Children.Add(miniAiHotkeyLabel);
+    contentGrid.Children.Add(miniAiHotkeyValue);
+
     var closeButton = new System.Windows.Controls.Button { Content = "✕", Style = (Style)FindResource("DialogCloseButtonStyle"), HorizontalAlignment = System.Windows.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -20, -20, 0), IsCancel = true };
     closeButton.Click += (s, e) => dialog.Close();
     parentGrid.Children.Add(contentGrid);
@@ -1921,6 +1977,7 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
             SaveSettings();
             _keyboardHook?.Dispose();
             try { _aiChatWindow?.Close(); } catch { }
+            try { _miniAiTabWindow?.Close(); } catch { }
             try
             {
                 if (Directory.Exists(_screenshotsTempFolder))
@@ -2449,157 +2506,6 @@ private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
 
         #endregion
 
-        #region Intro Video
-
-        private void InitializeIntroVideo(Grid rootGrid)
-        {
-            try
-            {
-                // Look for intro.mp4 next to the executable or in the app directory
-                string appDir = AppDomain.CurrentDomain.BaseDirectory;
-                string videoPath = Path.Combine(appDir, "intro.mp4");
-
-                if (!File.Exists(videoPath))
-                {
-                    // Fallback checks
-                    var parentDir = Directory.GetParent(appDir)?.FullName;
-                    if (parentDir != null && File.Exists(Path.Combine(parentDir, "intro.mp4")))
-                    {
-                        videoPath = Path.Combine(parentDir, "intro.mp4");
-                    }
-                }
-
-                if (!File.Exists(videoPath))
-                {
-                    try
-                    {
-                        var uri = new Uri("pack://application:,,,/intro.mp4", UriKind.Absolute);
-                        var sri = System.Windows.Application.GetResourceStream(uri);
-                        if (sri?.Stream != null)
-                        {
-                            string tempVideo = Path.Combine(Path.GetTempPath(), "oasyss_intro.mp4");
-                            if (!File.Exists(tempVideo) || new FileInfo(tempVideo).Length != sri.Stream.Length)
-                            {
-                                using var fs = File.Create(tempVideo);
-                                sri.Stream.CopyTo(fs);
-                            }
-                            videoPath = tempVideo;
-                        }
-                    }
-                    catch { }
-                }
-
-                if (!File.Exists(videoPath))
-                {
-                    Debug.WriteLine("intro.mp4 not found, skipping intro video.");
-                    _introFinished = true;
-                    return;
-                }
-
-                _introOverlay = new Grid
-                {
-                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x08, 0x09, 0x0B)),
-                    Visibility = Visibility.Visible,
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Stretch
-                };
-
-                _introMedia = new MediaElement
-                {
-                    Source = new Uri(videoPath, UriKind.Absolute),
-                    LoadedBehavior = MediaState.Manual,
-                    UnloadedBehavior = MediaState.Stop,
-                    Stretch = Stretch.Uniform,
-                    Volume = 0.85
-                };
-
-                _introMedia.MediaEnded += (s, e) => DismissIntroVideo();
-                _introMedia.MediaFailed += (s, e) => DismissIntroVideo();
-
-                _introOverlay.Children.Add(_introMedia);
-
-                // Subtle "Click or press Esc to skip" watermark badge
-                var skipBadge = new Border
-                {
-                    Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x60, 0x0A, 0x0E, 0x1A)),
-                    BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0xE5, 0xFF)),
-                    BorderThickness = new Thickness(1),
-                    CornerRadius = new CornerRadius(6),
-                    Padding = new Thickness(10, 4, 10, 4),
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
-                    VerticalAlignment = VerticalAlignment.Bottom,
-                    Margin = new Thickness(0, 0, 16, 16),
-                    Cursor = System.Windows.Input.Cursors.Hand
-                };
-                var skipText = new TextBlock
-                {
-                    Text = "SKIP (ESC)",
-                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xCC, 0x00, 0xE5, 0xFF)),
-                    FontSize = 10,
-                    FontWeight = FontWeights.SemiBold,
-                    FontFamily = new System.Windows.Media.FontFamily("Consolas, Segoe UI")
-                };
-                skipBadge.Child = skipText;
-                skipBadge.MouseLeftButtonDown += (s, e) => DismissIntroVideo();
-                _introOverlay.Children.Add(skipBadge);
-
-                _introOverlay.MouseLeftButtonDown += (s, e) => DismissIntroVideo();
-
-                rootGrid.Children.Add(_introOverlay);
-
-                this.Loaded += (s, e) =>
-                {
-                    try
-                    {
-                        _introMedia?.Play();
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"Error playing intro video: {ex.Message}");
-                        DismissIntroVideo();
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to setup intro video: {ex.Message}");
-                _introFinished = true;
-            }
-        }
-
-        private void DismissIntroVideo()
-        {
-            if (_introFinished || _introOverlay == null) return;
-            _introFinished = true;
-
-            try
-            {
-                _introMedia?.Stop();
-            }
-            catch { }
-
-            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation
-            {
-                From = 1.0,
-                To = 0.0,
-                Duration = TimeSpan.FromMilliseconds(400)
-            };
-
-            fadeAnim.Completed += (s, e) =>
-            {
-                if (_introOverlay != null)
-                {
-                    _introOverlay.Visibility = Visibility.Collapsed;
-                    _introOverlay = null;
-                    _introMedia = null;
-                }
-            };
-
-            _introOverlay.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
-        }
-
-        #endregion
-
         #region AI Chat
 
         private void BuildAiChatPanel()
@@ -3002,13 +2908,6 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         case Key.LWin: case Key.RWin: _winPressed = true; break;
     }
 
-    if (!_introFinished && (e.Key == Key.Escape || e.Key == Key.Space))
-    {
-        Dispatcher.Invoke(DismissIntroVideo);
-        e.Handled = true;
-        return;
-    }
-
     bool handled = false;
     int modifiersPressedCount = (_ctrlPressed ? 1 : 0) + (_shiftPressed ? 1 : 0) + (_altPressed ? 1 : 0) + (_winPressed ? 1 : 0);
 
@@ -3034,7 +2933,11 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         }
         else if (actionKey == Key.T)
         {
-            if (_isBrowserMode)
+            if (_miniAiTabWindow != null && _miniAiTabWindow.IsVisible)
+            {
+                Dispatcher.Invoke(() => _miniAiTabWindow.ToggleCompleteTransparency());
+            }
+            else if (_isBrowserMode)
             {
                 Dispatcher.Invoke(ToggleAiTransparency);
             }
@@ -3062,7 +2965,12 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
     }
     else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.T)
     {
-        if (_isBrowserMode)
+        if (_miniAiTabWindow != null && _miniAiTabWindow.IsVisible)
+        {
+            Dispatcher.Invoke(() => _miniAiTabWindow.ToggleCompleteTransparency());
+            handled = true;
+        }
+        else if (_isBrowserMode)
         {
             Dispatcher.Invoke(ToggleAiTransparency);
             handled = true;
@@ -3121,11 +3029,25 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
     {
         bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
                              (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
-                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused) ||
+                             (_miniAiTabWindow != null && _miniAiTabWindow.IsInputFocused);
 
         if (!isEditingText)
         {
             Dispatcher.Invoke(ToggleBrowserMode);
+            handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.C)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused) ||
+                             (_miniAiTabWindow != null && _miniAiTabWindow.IsInputFocused);
+
+        if (!isEditingText)
+        {
+            Dispatcher.Invoke(ToggleMiniAiTab);
             handled = true;
         }
     }
@@ -3393,7 +3315,7 @@ private bool AreHotkeyModifiersAPotentialMatch()
             await coreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
         }
 
-        private static async Task<Microsoft.Web.WebView2.Core.CoreWebView2Environment> GetOrCreateWebViewEnvironmentAsync(string userDataFolder)
+        internal static async Task<Microsoft.Web.WebView2.Core.CoreWebView2Environment> GetOrCreateWebViewEnvironmentAsync(string userDataFolder)
         {
             if (_sharedWebViewEnvironment != null)
                 return _sharedWebViewEnvironment;

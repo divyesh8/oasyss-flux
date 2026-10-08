@@ -789,6 +789,12 @@
                                                    Margin="5,0,0,0"
                                                    VerticalAlignment="Center"/>
                                     </StackPanel>
+                                    <Button x:Name="MiniAiTabButton" Margin="0,0,8,0" Style="{StaticResource ModernButtonStyle}" Padding="8,2" Height="26" ToolTip="Transform to Undetectable Small AI Tab (Shift+C)">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="✨" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
+                                            <TextBlock Text="AI TAB" FontSize="9" FontWeight="SemiBold" FontFamily="JetBrains Mono, Consolas" Foreground="{DynamicResource Theme.TextPrimary}" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                     <Button x:Name="TopModeToggleButton" Margin="0,0,8,0" Style="{StaticResource ModernButtonStyle}" Padding="8,2" Height="26" ToolTip="Toggle Full Browser Mode (Shift+B)">
                                         <StackPanel Orientation="Horizontal">
                                             <TextBlock x:Name="TopModeIcon" Text="🌐" FontSize="11" Margin="0,0,4,0" VerticalAlignment="Center"/>
@@ -993,6 +999,13 @@
                                     <DockPanel Grid.Row="0" Margin="0,0,0,4">
                                         <!-- Chrome Top Window Controls (Visible ONLY in Browser Mode) -->
                                         <StackPanel x:Name="ChromeTopControls" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed" Margin="8,0,0,0">
+                                            <!-- Mini AI Tab Button in Browser Mode -->
+                                            <Button x:Name="BtnTopMiniAi" Style="{StaticResource ChromeGeminiButtonStyle}" Margin="0,0,6,0" ToolTip="Transform to Undetectable Small AI Tab (Shift+C)">
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="✨" Margin="0,0,5,0" FontSize="12" Foreground="#8AB4F8"/>
+                                                    <TextBlock Text="AI Tab" FontSize="11" FontWeight="Medium" Foreground="#E8EAED"/>
+                                                </StackPanel>
+                                            </Button>
                                             <!-- Google Lens Button in Browser Mode -->
                                             <Button x:Name="BtnTopLens" Style="{StaticResource ChromeGeminiButtonStyle}" Margin="0,0,6,0" ToolTip="Google Lens: One-Click Whole Screenshot &amp; Ask AI (Shift+L)">
                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">

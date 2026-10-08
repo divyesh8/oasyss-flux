@@ -40,7 +40,6 @@
     <Resource Include="sound.png" />
     <Resource Include="muted.png" />
     <Resource Include="logo.png" />
-    <Resource Include="intro.mp4" />
     <Resource Include="app.ico" />
     <Resource Include="chrome.ico" />
     <Resource Include="chrome.png" />
