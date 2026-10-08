@@ -371,7 +371,7 @@ namespace MyOverlayPOC
                     };
 
                     string gRes = await gemini.SendMessageAsync(new List<ChatMessage> { chatMsg }, "gemini-3.5-flash", geminiApiKey);
-                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️"))
+                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️") && !gRes.Contains("API key", StringComparison.OrdinalIgnoreCase))
                     {
                         answerText = gRes;
                     }
@@ -595,7 +595,7 @@ namespace MyOverlayPOC
                     };
 
                     string gRes = await gemini.SendMessageAsync(new List<ChatMessage> { chatMsg }, "gemini-3.5-flash", geminiApiKey);
-                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️"))
+                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️") && !gRes.Contains("API key", StringComparison.OrdinalIgnoreCase))
                     {
                         answerText = gRes;
                     }

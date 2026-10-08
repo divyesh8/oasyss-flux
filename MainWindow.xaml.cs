@@ -523,14 +523,7 @@ private bool _minimizeOnFocusLoss = true;
 
 private void ToggleProgrammaticMinimize()
 {
-    if (_isMinimized)
-    {
-        RestoreWindow();
-    }
-    else
-    {
-        MinimizeCustom();
-    }
+    ToggleCompleteTransparency();
 }
 
 
@@ -1321,6 +1314,10 @@ private void ToggleProgrammaticMinimize()
                 {
                     this.WindowState = WindowState.Normal;
                 }
+                if (_isCompletelyTransparent)
+                {
+                    ToggleCompleteTransparency();
+                }
                 this.Activate();
             }
             else
@@ -1438,14 +1435,15 @@ private void LoadSettings()
             if (settings.Opacity >= 0.2 && settings.Opacity <= 1.0) _overlayOpacity = settings.Opacity;
 
             // AI Configuration (DPAPI decrypted)
-            _aiChatService.GeminiApiKey = SecureStorageHelper.DecryptString(settings.GeminiApiKey);
+            var decKey = SecureStorageHelper.DecryptString(settings.GeminiApiKey);
+            _aiChatService.GeminiApiKey = !string.IsNullOrWhiteSpace(decKey) ? decKey : GeminiProvider.DefaultGeminiApiKey;
             _aiChatService.OpenAiApiKey = SecureStorageHelper.DecryptString(settings.OpenAiApiKey);
             _aiChatService.GroqApiKey = SecureStorageHelper.DecryptString(settings.GroqApiKey);
             _aiChatService.ClaudeApiKey = SecureStorageHelper.DecryptString(settings.ClaudeApiKey);
             _aiChatService.ActiveProviderName = settings.DefaultAiProvider ?? "Gemini";
-            if (string.IsNullOrWhiteSpace(settings.DefaultAiModel) || settings.DefaultAiModel == "gemini-3.6-flash")
+            if (string.IsNullOrWhiteSpace(settings.DefaultAiModel) || settings.DefaultAiModel == "gemini-3.6-flash" || settings.DefaultAiModel == "gemini-2.5-flash" || settings.DefaultAiModel == "gemini-2.0-flash")
             {
-                settings.DefaultAiModel = "gemini-2.5-flash";
+                settings.DefaultAiModel = "gemini-3.5-flash";
             }
             _aiChatService.ActiveModelId = settings.DefaultAiModel;
 
@@ -1468,8 +1466,8 @@ public void SaveSettings()
     {
         var settings = new AppSettings
         {
-            Width = this.Width,
-            Height = this.Height,
+            Width = this.Width >= 200 ? this.Width : (_originalWidth >= 200 ? _originalWidth : 1200),
+            Height = this.Height >= 200 ? this.Height : (_originalHeight >= 200 ? _originalHeight : 800),
             RestoreTabsOnStartup = _restoreTabsOnStartup,
             MinimizeOnFocusLoss = _minimizeOnFocusLoss,
             Theme = _isDarkMode ? "Dark" : "Light",
@@ -2028,21 +2026,12 @@ private async void SettingsButton_Click(object sender, RoutedEventArgs e)
         }
 private void MinimizeCustom()
 {
-    if (_isMinimized) return;
-
-    _originalHeight = this.Height;
-    _originalWidth = this.Width;
-    _originalBorderPadding = MainOverlayBorder.Padding;
-    _originalBorderCornerRadius = MainOverlayBorder.CornerRadius;
-
-    BrowserTabs.Visibility = Visibility.Collapsed;
-    double newWidth = 22;
-    this.Left += this.Width - newWidth;
-    MainOverlayBorder.Padding = new Thickness(0);
-    MainOverlayBorder.CornerRadius = new CornerRadius(0);
-    this.Height = 22;
-    this.Width = newWidth;
-    _isMinimized = true;
+    // Completely removed the 22x22 square box!
+    // Minimizing now makes the window completely transparent (Ghost mode) without any visible box
+    if (!_isCompletelyTransparent)
+    {
+        ToggleCompleteTransparency();
+    }
 }
 private Task<(bool success, string name, string url)> ShowBookmarkDialog(string defaultName = "", string defaultUrl = "")
 {
@@ -2977,28 +2966,11 @@ private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
         }
         else
         {
-            bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
-                                 (_aiChatInput != null && _aiChatInput.IsKeyboardFocused);
-
-            if (this.IsActive && !isEditingText)
-            {
-                Dispatcher.Invoke(ToggleCompleteTransparency);
-                handled = true;
-            }
-            else
-            {
-                var now = DateTime.UtcNow;
-                if ((now - _lastShiftTPressTime).TotalMilliseconds <= 450)
-                {
-                    Dispatcher.Invoke(ToggleCompleteTransparency);
-                    handled = true;
-                    _lastShiftTPressTime = DateTime.MinValue;
-                }
-                else
-                {
-                    _lastShiftTPressTime = now;
-                }
-            }
+            // Single Shift+T immediately toggles transparency:
+            // When transparent -> restores to visible and brings to focus!
+            // When visible -> becomes completely transparent!
+            Dispatcher.Invoke(ToggleCompleteTransparency);
+            handled = true;
         }
     }
     else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.I)
@@ -3670,12 +3642,17 @@ private void CoreWebView2_PermissionRequested(object? sender, CoreWebView2Permis
 }
 private void MainWindow_Deactivated(object? sender, EventArgs e)
 {
-    // In Browser Mode, NEVER minimize on focus loss! Both the browser and the AI companion must stay open and available.
+    // In Browser Mode, NEVER auto-hide on focus loss! Both the browser and the AI companion must stay open and available.
     if (_isBrowserMode) return;
 
-    if (_minimizeOnFocusLoss && !_isMinimized && this.OwnedWindows.Count == 0 && (_aiChatWindow == null || !_aiChatWindow.IsVisible))
+    if (this.OwnedWindows.Count > 0) return;
+    if (_aiChatWindow != null && _aiChatWindow.IsVisible) return;
+    if (_miniAiTabWindow != null && _miniAiTabWindow.IsVisible) return;
+
+    // After clicking somewhere, it should NOT minimize into a square box — it should become transparent!
+    if (_minimizeOnFocusLoss && !_isCompletelyTransparent)
     {
-        MinimizeCustom();
+        ToggleCompleteTransparency();
     }
 }
         private void AddressBar_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -3847,35 +3824,32 @@ private void MinimizeButton_Click(object sender, RoutedEventArgs e)
 
         private void RestoreWindow()
         {
-            if (!_isMinimized) return;
+            if (this.Width < 200 || this.Height < 200)
+            {
+                var workArea = SystemParameters.WorkArea;
+                this.Height = _originalHeight > 200 ? _originalHeight : (workArea.Height * 0.87);
+                this.Width = _originalWidth > 200 ? _originalWidth : (this.Height * 1.38);
+                MainOverlayBorder.Padding = _originalBorderPadding.Left > 0 ? _originalBorderPadding : new Thickness(1);
+                MainOverlayBorder.CornerRadius = _originalBorderCornerRadius.TopLeft > 0 ? _originalBorderCornerRadius : new CornerRadius(12);
+                BrowserTabs.Visibility = Visibility.Visible;
+            }
 
-            this.Left = this.Left + this.Width - _originalWidth;
-            this.Height = _originalHeight;
-            this.Width = _originalWidth;
-            MainOverlayBorder.Padding = _originalBorderPadding;
-            MainOverlayBorder.CornerRadius = _originalBorderCornerRadius;
-            BrowserTabs.Visibility = Visibility.Visible;
-            _isMinimized = false;
+            if (_isCompletelyTransparent)
+            {
+                ToggleCompleteTransparency();
+            }
         }
 
         private void MainWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            if (_isMinimized)
+            if (e.Source == MainOverlayBorder || 
+               (e.Source is Grid grid && grid.Name != "templateRoot") ||
+                e.Source is DockPanel || 
+               (e.Source is Border border && border.Name != "MainOverlayBorder" && border.TemplatedParent == null))
             {
-                if (e.ClickCount >= 2) RestoreWindow();
-                else DragMove();
-            }
-            else
-            {
-                if (e.Source == MainOverlayBorder || 
-                   (e.Source is Grid grid && grid.Name != "templateRoot") ||
-                    e.Source is DockPanel || 
-                   (e.Source is Border border && border.Name != "MainOverlayBorder" && border.TemplatedParent == null))
+                if (e.ButtonState == MouseButtonState.Pressed)
                 {
-                    if (e.ButtonState == MouseButtonState.Pressed)
-                    {
-                        try { DragMove(); } catch (InvalidOperationException) { /* Can happen during rapid clicks, safe to ignore. */ }
-                    }
+                    try { DragMove(); } catch (InvalidOperationException) { /* Can happen during rapid clicks, safe to ignore. */ }
                 }
             }
         }

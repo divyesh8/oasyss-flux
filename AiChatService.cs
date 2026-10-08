@@ -90,7 +90,7 @@ namespace MyOverlayPOC
             }
 
             if (string.IsNullOrWhiteSpace(apiKey))
-                return "Gemini API key not set. Add it in Settings or set the GEMINI_API_KEY environment variable.";
+                return "⚠️ API key unavailable";
 
             if (string.IsNullOrWhiteSpace(modelId) || modelId == "gemini-2.5-flash" || modelId == "gemini-2.0-flash" || modelId == "gemini-1.5-flash")
             {
@@ -155,6 +155,7 @@ namespace MyOverlayPOC
             // Candidate models for automatic failover
             var candidateModels = new List<string> { modelId };
             if (!candidateModels.Contains("gemini-3.5-flash")) candidateModels.Add("gemini-3.5-flash");
+            if (!candidateModels.Contains("gemini-3.8-flash")) candidateModels.Add("gemini-3.8-flash");
             if (!candidateModels.Contains("gemini-3.1-flash-lite")) candidateModels.Add("gemini-3.1-flash-lite");
 
             string lastError = "";
@@ -557,7 +558,7 @@ namespace MyOverlayPOC
         public bool IsProcessing { get; private set; }
 
         // API Keys (set from settings)
-        public string GeminiApiKey { get; set; } = "";
+        public string GeminiApiKey { get; set; } = GeminiProvider.DefaultGeminiApiKey;
         public string OpenAiApiKey { get; set; } = "";
         public string GroqApiKey { get; set; } = "";
         public string ClaudeApiKey { get; set; } = "";
@@ -637,7 +638,7 @@ namespace MyOverlayPOC
                 var history = Messages.ToList();
                 var response = await provider.SendMessageAsync(history, modelId, apiKey);
 
-                if (!string.IsNullOrWhiteSpace(response) && !response.StartsWith("❌") && !response.StartsWith("⚠️"))
+                if (!string.IsNullOrWhiteSpace(response) && !response.StartsWith("❌") && !response.StartsWith("⚠️") && !response.Contains("API key", StringComparison.OrdinalIgnoreCase))
                 {
                     Messages.Add(new ChatMessage
                     {
@@ -653,7 +654,7 @@ namespace MyOverlayPOC
                 {
                     var gemini = new GeminiProvider();
                     var gRes = await gemini.SendMessageAsync(history, "gemini-3.5-flash", GeminiProvider.DefaultGeminiApiKey);
-                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️"))
+                    if (!string.IsNullOrWhiteSpace(gRes) && !gRes.StartsWith("❌") && !gRes.StartsWith("⚠️") && !gRes.Contains("API key", StringComparison.OrdinalIgnoreCase))
                     {
                         Messages.Add(new ChatMessage
                         {
@@ -758,7 +759,7 @@ namespace MyOverlayPOC
 
                 var response = await gemini.SendMessageAsync(history, "gemini-3.5-flash", apiKey);
 
-                if (string.IsNullOrWhiteSpace(response) || response.StartsWith("❌") || response.StartsWith("⚠️"))
+                if (string.IsNullOrWhiteSpace(response) || response.StartsWith("❌") || response.StartsWith("⚠️") || response.Contains("API key", StringComparison.OrdinalIgnoreCase))
                 {
                     // Fallback to web search if offline
                     response = await GenerateZeroKeyLensAnswerAsync(userMessage, ocrContext);
