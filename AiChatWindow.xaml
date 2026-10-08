@@ -1,0 +1,611 @@
+<Window x:Class="MyOverlayPOC.AiChatWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MyOverlayPOC"
+        mc:Ignorable="d"
+        Title="Ask Gemini"
+        Height="580" Width="430"
+        MinHeight="380" MinWidth="320"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        WindowStartupLocation="Manual">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="ScrollBarThumbStyle" TargetType="{x:Type Thumb}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Focusable" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <Border CornerRadius="4" Background="#5F6368" BorderBrush="Transparent" BorderThickness="0" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DarkThinScrollBarStyle" TargetType="{x:Type ScrollBar}">
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="6"/>
+                    <Setter Property="Height" Value="Auto" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ScrollBar}">
+                                <Grid>
+                                    <Border Background="#202124" CornerRadius="3"/>
+                                    <Track Name="PART_Track" IsDirectionReversed="true">
+                                        <Track.Thumb>
+                                            <Thumb Style="{StaticResource ScrollBarThumbStyle}" Margin="1,0,1,0" />
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="DarkThinScrollViewerStyle" TargetType="{x:Type ScrollViewer}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ScrollViewer}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ScrollContentPresenter Grid.Column="0" CanContentScroll="{TemplateBinding CanContentScroll}" Margin="{TemplateBinding Padding}" />
+                            <ScrollBar Name="PART_VerticalScrollBar"
+                                       Grid.Column="1"
+                                       Value="{TemplateBinding VerticalOffset}"
+                                       Maximum="{TemplateBinding ScrollableHeight}"
+                                       ViewportSize="{TemplateBinding ViewportHeight}"
+                                       Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"
+                                       Style="{StaticResource DarkThinScrollBarStyle}"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chrome ComboBox Toggle Button -->
+        <ControlTemplate x:Key="ChromeComboBoxToggleButtonTemplate" TargetType="{x:Type ToggleButton}">
+            <Border x:Name="Border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6"
+                    SnapsToDevicePixels="True">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="20" />
+                    </Grid.ColumnDefinitions>
+                    <Path x:Name="Arrow"
+                          Grid.Column="1"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Margin="0,0,4,0"
+                          Data="M 0 0 L 4 4 L 8 0"
+                          Stroke="#9AA0A6"
+                          StrokeThickness="1.5"
+                          StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round"
+                          SnapsToDevicePixels="True" />
+                </Grid>
+            </Border>
+            <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#35363A" />
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#8AB4F8" />
+                    <Setter TargetName="Arrow" Property="Stroke" Value="#8AB4F8" />
+                </Trigger>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter TargetName="Border" Property="Background" Value="#35363A" />
+                    <Setter TargetName="Border" Property="BorderBrush" Value="#8AB4F8" />
+                    <Setter TargetName="Arrow" Property="Stroke" Value="#8AB4F8" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter TargetName="Border" Property="Opacity" Value="0.5" />
+                </Trigger>
+            </ControlTemplate.Triggers>
+        </ControlTemplate>
+
+        <Style x:Key="ChromeComboBoxToggleButtonStyle" TargetType="{x:Type ToggleButton}">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="IsTabStop" Value="False" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ClickMode" Value="Press" />
+            <Setter Property="Template" Value="{StaticResource ChromeComboBoxToggleButtonTemplate}" />
+        </Style>
+
+        <!-- Chrome ComboBoxItem Style -->
+        <Style x:Key="ChromeComboBoxItemStyle" TargetType="{x:Type ComboBoxItem}">
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="Foreground" Value="#E8EAED" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Margin="2,1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#35363A" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#1A73E8" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True" />
+                                    <Condition Property="IsMouseOver" Value="True" />
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#1765CC" />
+                                <Setter Property="Foreground" Value="#FFFFFF" />
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Chrome ComboBox Style -->
+        <Style x:Key="ChromeComboBoxStyle" TargetType="{x:Type ComboBox}">
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="Background" Value="#202124" />
+            <Setter Property="Foreground" Value="#E8EAED" />
+            <Setter Property="BorderBrush" Value="#3C4043" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ChromeComboBoxItemStyle}" />
+            <Setter Property="Padding" Value="8,4,22,4" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Style="{StaticResource ChromeComboBoxToggleButtonStyle}"
+                                          Focusable="False"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press"
+                                          Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}" />
+                            <ContentPresenter x:Name="ContentSite"
+                                              IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left" />
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide">
+                                <Grid x:Name="DropDown"
+                                      SnapsToDevicePixels="True"
+                                      MinWidth="{TemplateBinding ActualWidth}"
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <Border x:Name="DropDownBorder"
+                                            Background="#292A2D"
+                                            BorderThickness="1"
+                                            BorderBrush="#3C4043"
+                                            CornerRadius="6"
+                                            Margin="0,2,0,4">
+                                        <Border.Effect>
+                                            <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="3" Opacity="0.5" />
+                                        </Border.Effect>
+                                        <ScrollViewer Margin="2" SnapsToDevicePixels="True" Style="{StaticResource DarkThinScrollViewerStyle}">
+                                            <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained" />
+                                        </ScrollViewer>
+                                    </Border>
+                                </Grid>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="DropDownBorder" Property="MinHeight" Value="56" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="AiWindowCtrlBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#9AA0A6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#35363A"/>
+                                <Setter Property="Foreground" Value="#E8EAED"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AiWindowCloseBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#9AA0A6"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#D93025"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChromePillBtnStyle" TargetType="Button">
+            <Setter Property="Background" Value="#35363A"/>
+            <Setter Property="Foreground" Value="#E8EAED"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3C4043"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#3C4043"/>
+                                <Setter TargetName="b" Property="BorderBrush" Value="#8AB4F8"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#292A2D"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="38"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="10" />
+    </WindowChrome.WindowChrome>
+
+    <Border Background="#202124" 
+            BorderBrush="#3C4043" 
+            BorderThickness="1" 
+            CornerRadius="10"
+            ClipToBounds="True">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Title Bar -->
+                <RowDefinition Height="38"/>
+                <!-- Provider / Model Bar -->
+                <RowDefinition Height="Auto"/>
+                <!-- Messages Area -->
+                <RowDefinition Height="*"/>
+                <!-- Input Area -->
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ROW 0: Title Bar -->
+            <Border Grid.Row="0" Background="#292A2D" BorderBrush="#3C4043" BorderThickness="0,0,0,1" Padding="12,0,8,0">
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <!-- Settings Button -->
+                        <Button x:Name="BtnSettings" Style="{StaticResource AiWindowCtrlBtn}" Width="32" Height="26" ToolTip="AI Settings &amp; API Keys" Click="BtnSettings_Click">
+                            <TextBlock Text="⚙" FontSize="14" Foreground="#9AA0A6" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="BtnMinimize" Style="{StaticResource AiWindowCtrlBtn}" Width="32" Height="26" ToolTip="Minimize" Click="BtnMinimize_Click">
+                            <TextBlock Text="&#x2014;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Button x:Name="BtnClose" Style="{StaticResource AiWindowCloseBtn}" Width="32" Height="26" ToolTip="Close" Click="BtnClose_Click">
+                            <TextBlock Text="&#x2715;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="📷" FontSize="13" Foreground="#8AB4F8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="Google Lens &amp; AI" FontSize="12" FontWeight="SemiBold" Foreground="#E8EAED" VerticalAlignment="Center"/>
+                        <Border Background="#1E3A2F" BorderBrush="#34A853" BorderThickness="1" CornerRadius="3" Padding="5,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="FREE • NO API KEY" FontSize="8" FontWeight="Bold" Foreground="#34A853" FontFamily="Segoe UI, Consolas"/>
+                        </Border>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- ROW 1: Provider & Model Selector + Lens Scan -->
+            <Border Grid.Row="1" Background="#292A2D" BorderBrush="#3C4043" BorderThickness="0,0,0,1" Padding="10,6">
+                <DockPanel LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Google Lens 1-Click Whole Screen Capture Button -->
+                        <Button x:Name="BtnGoogleLens" Style="{StaticResource ChromePillBtnStyle}" Padding="10,4" Margin="0,0,6,0" FontSize="11" ToolTip="Google Lens: 1-Click Whole Screenshot &amp; Ask AI" Click="BtnGoogleLens_Click">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="📷" FontSize="11" Margin="0,0,5,0"/>
+                                <TextBlock Text="Google Lens" FontSize="11" FontWeight="SemiBold" Foreground="#8AB4F8"/>
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="BtnClear" Content="🗑 Clear" Style="{StaticResource AiWindowCtrlBtn}" Padding="8,3" FontSize="11" Click="BtnClear_Click"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <ComboBox x:Name="ProviderCombo" Width="105" Margin="0,0,6,0" FontSize="11"
+                                  Style="{StaticResource ChromeComboBoxStyle}"
+                                  SelectionChanged="ProviderCombo_SelectionChanged"/>
+                        <ComboBox x:Name="ModelCombo" Width="165" FontSize="11"
+                                  Style="{StaticResource ChromeComboBoxStyle}"
+                                  SelectionChanged="ModelCombo_SelectionChanged"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- ROW 2: Messages -->
+            <ScrollViewer x:Name="MessagesScrollViewer" Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="8,6" Style="{StaticResource DarkThinScrollViewerStyle}">
+                <ItemsControl x:Name="MessagesControl">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type local:ChatMessage}">
+                            <Border x:Name="MsgBorder" CornerRadius="8" Padding="10,7" Margin="4,3" MaxWidth="350">
+                                <StackPanel>
+                                    <Border Visibility="{Binding HasImage, Converter={StaticResource BoolToVis}}" CornerRadius="6" Margin="0,0,0,6" MaxWidth="320" MaxHeight="180" ClipToBounds="True" Background="#121316">
+                                        <Image Source="{Binding ImagePreview}" Stretch="Uniform"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding Content}" TextWrapping="Wrap" FontSize="12" Foreground="#E8EAED"/>
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                    <Setter TargetName="MsgBorder" Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter TargetName="MsgBorder" Property="Background" Value="#1A3B5C"/>
+                                    <Setter TargetName="MsgBorder" Property="BorderBrush" Value="#2979FF"/>
+                                    <Setter TargetName="MsgBorder" Property="BorderThickness" Value="1"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsUser}" Value="False">
+                                    <Setter TargetName="MsgBorder" Property="HorizontalAlignment" Value="Left"/>
+                                    <Setter TargetName="MsgBorder" Property="Background" Value="#2B2D30"/>
+                                    <Setter TargetName="MsgBorder" Property="BorderBrush" Value="#3C4043"/>
+                                    <Setter TargetName="MsgBorder" Property="BorderThickness" Value="1"/>
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- ROW 3: Input Area -->
+            <Border Grid.Row="3" Background="#292A2D" BorderBrush="#3C4043" BorderThickness="0,1,0,0" Padding="8,8">
+                <StackPanel>
+                    <!-- Attached Image Preview Bar (Directly pasted & ready to search) -->
+                    <Border x:Name="AttachedImageBar" Visibility="Collapsed" Background="#202124" BorderBrush="#3C4043" BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,8">
+                        <DockPanel LastChildFill="True">
+                            <Button x:Name="BtnClearAttachment" DockPanel.Dock="Right" Style="{StaticResource AiWindowCloseBtn}" Width="24" Height="24" ToolTip="Remove screenshot" Click="BtnClearAttachment_Click">
+                                <TextBlock Text="&#x2715;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <Button x:Name="BtnOpenInBrowserLens" DockPanel.Dock="Right" Style="{StaticResource ChromePillBtnStyle}" Margin="0,0,6,0" Padding="8,3" FontSize="10" ToolTip="Open Google Images in browser (Press Ctrl+V to search by image)" Click="BtnOpenInBrowserLens_Click">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🌐" FontSize="10" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Google Images" FontSize="10" FontWeight="Medium" Foreground="#8AB4F8"/>
+                                </StackPanel>
+                            </Button>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border CornerRadius="4" BorderBrush="#8AB4F8" BorderThickness="1" Margin="0,0,8,0" Width="48" Height="32" ClipToBounds="True" Background="#121316">
+                                    <Image x:Name="AttachedImageThumb" Stretch="UniformToFill"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="📷" FontSize="11" Margin="0,0,4,0"/>
+                                        <TextBlock Text="Whole Screenshot Attached (Google Lens)" FontSize="11" FontWeight="SemiBold" Foreground="#8AB4F8"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Type your question below and press Enter — No API key needed!" FontSize="10" Foreground="#9AA0A6"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <!-- Input Lens Shortcut Button -->
+                        <Button x:Name="BtnInputLens" Grid.Column="0" Style="{StaticResource AiWindowCtrlBtn}" Width="32" Height="30" Margin="0,0,6,0" ToolTip="Google Lens: 1-Click Whole Screen Capture &amp; Ask" Click="BtnGoogleLens_Click">
+                            <TextBlock Text="📷" FontSize="14" Foreground="#8AB4F8" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Button>
+                        <Grid Grid.Column="1">
+                            <TextBox x:Name="InputBox"
+                                     Background="#202124" Foreground="#E8EAED" BorderBrush="#3C4043" BorderThickness="1"
+                                     CaretBrush="#8AB4F8" Padding="8,6" FontSize="12"
+                                     AcceptsReturn="False" TextWrapping="Wrap" MaxHeight="80"
+                                     VerticalContentAlignment="Center" KeyDown="InputBox_KeyDown" PreviewKeyDown="InputBox_PreviewKeyDown"/>
+                            <TextBlock x:Name="InputPlaceholder"
+                                       Text="Ask a question about this screen or chat with AI..."
+                                       Foreground="#9AA0A6"
+                                       IsHitTestVisible="False"
+                                       VerticalAlignment="Center"
+                                       Margin="10,0,0,0"
+                                       FontSize="12">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Text, ElementName=InputBox}" Value="">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Grid>
+                        <Button x:Name="BtnSend" Grid.Column="2" Content="Send" Margin="6,0,0,0" Padding="14,6"
+                                Background="#1A73E8" Foreground="#FFFFFF" BorderThickness="0"
+                                FontWeight="SemiBold" FontSize="12" Cursor="Hand" Click="BtnSend_Click">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="b" Property="Background" Value="#1765CC"/>
+                                        </Trigger>
+                                        <Trigger Property="IsPressed" Value="True">
+                                            <Setter TargetName="b" Property="Background" Value="#1558B0"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- SETTINGS OVERLAY PANEL -->
+            <Border x:Name="AiSettingsOverlay" Visibility="Collapsed" Background="#D918191C" Grid.RowSpan="4" Panel.ZIndex="100" Padding="14">
+                <Border Background="#292A2D" BorderBrush="#3C4043" BorderThickness="1" CornerRadius="8" Padding="14">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header -->
+                        <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                            <Button x:Name="BtnCloseSettings" DockPanel.Dock="Right" Style="{StaticResource AiWindowCloseBtn}" Width="28" Height="24" Click="BtnCloseSettings_Click">
+                                <TextBlock Text="&#x2715;" FontSize="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="⚙" FontSize="14" Foreground="#8AB4F8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="AI Settings &amp; API Keys" FontSize="13" FontWeight="SemiBold" Foreground="#E8EAED" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <!-- Form Body -->
+                        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,8" Style="{StaticResource DarkThinScrollViewerStyle}">
+                            <StackPanel>
+                                <!-- Gemini Section -->
+                                <TextBlock Text="Google Gemini (Recommended / Free)" FontSize="11" FontWeight="SemiBold" Foreground="#8AB4F8" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SettingsGeminiKeyBox" Grid.Column="0" Background="#202124" Foreground="#E8EAED" BorderBrush="#3C4043" BorderThickness="1" Padding="6,4" FontSize="11"/>
+                                    <Button x:Name="BtnPasteGemini" Grid.Column="1" Content="📋 Paste" Style="{StaticResource AiWindowCtrlBtn}" Padding="8,4" Margin="4,0,0,0" FontSize="10" Click="BtnPasteGemini_Click"/>
+                                </Grid>
+                                <TextBlock Text="Get free key: aistudio.google.com/apikey" FontSize="9" Foreground="#9AA0A6" Margin="0,0,0,10"/>
+
+                                <!-- Groq Section -->
+                                <TextBlock Text="Groq Cloud (Fast / Free)" FontSize="11" FontWeight="SemiBold" Foreground="#34A853" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SettingsGroqKeyBox" Grid.Column="0" Background="#202124" Foreground="#E8EAED" BorderBrush="#3C4043" BorderThickness="1" Padding="6,4" FontSize="11"/>
+                                    <Button x:Name="BtnPasteGroq" Grid.Column="1" Content="📋 Paste" Style="{StaticResource AiWindowCtrlBtn}" Padding="8,4" Margin="4,0,0,0" FontSize="10" Click="BtnPasteGroq_Click"/>
+                                </Grid>
+                                <TextBlock Text="Get free key: console.groq.com/keys" FontSize="9" Foreground="#9AA0A6" Margin="0,0,0,10"/>
+
+                                <!-- OpenAI Section -->
+                                <TextBlock Text="OpenAI ChatGPT" FontSize="11" FontWeight="SemiBold" Foreground="#FBBC04" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SettingsOpenAiKeyBox" Grid.Column="0" Background="#202124" Foreground="#E8EAED" BorderBrush="#3C4043" BorderThickness="1" Padding="6,4" FontSize="11"/>
+                                    <Button x:Name="BtnPasteOpenAi" Grid.Column="1" Content="📋 Paste" Style="{StaticResource AiWindowCtrlBtn}" Padding="8,4" Margin="4,0,0,0" FontSize="10" Click="BtnPasteOpenAi_Click"/>
+                                </Grid>
+                                <TextBlock Text="Get key: platform.openai.com/api-keys" FontSize="9" Foreground="#9AA0A6" Margin="0,0,0,10"/>
+
+                                <!-- Claude Section -->
+                                <TextBlock Text="Anthropic Claude" FontSize="11" FontWeight="SemiBold" Foreground="#D97706" Margin="0,0,0,4"/>
+                                <Grid Margin="0,0,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="SettingsClaudeKeyBox" Grid.Column="0" Background="#202124" Foreground="#E8EAED" BorderBrush="#3C4043" BorderThickness="1" Padding="6,4" FontSize="11"/>
+                                    <Button x:Name="BtnPasteClaude" Grid.Column="1" Content="📋 Paste" Style="{StaticResource AiWindowCtrlBtn}" Padding="8,4" Margin="4,0,0,0" FontSize="10" Click="BtnPasteClaude_Click"/>
+                                </Grid>
+                                <TextBlock Text="Get key: console.anthropic.com/settings/keys" FontSize="9" Foreground="#9AA0A6" Margin="0,0,0,10"/>
+
+                                <TextBlock x:Name="SettingsStatusText" Text="" FontSize="11" Foreground="#34A853" Margin="0,4,0,0" HorizontalAlignment="Center"/>
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Save Button -->
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="BtnSaveSettings" Content="💾 Save &amp; Apply" Padding="14,6" Background="#1A73E8" Foreground="#FFFFFF" BorderThickness="0" FontWeight="SemiBold" FontSize="11" Cursor="Hand" Click="BtnSaveSettings_Click">
+                                <Button.Template>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Button.Template>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

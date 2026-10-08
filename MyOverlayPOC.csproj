@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <AssemblyName>Oasyss Flux</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DefaultItemExcludes>$(DefaultItemExcludes);oasyss-flux-windows\**</DefaultItemExcludes>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <Target Name="CopyPublishedToRoot" AfterTargets="Publish">
+    <Copy SourceFiles="$(PublishDir)Oasyss Flux.exe" DestinationFolder="$(MSBuildProjectDirectory)\Release\" Condition="Exists('$(PublishDir)Oasyss Flux.exe')" />
+    <Copy SourceFiles="$(PublishDir)Oasyss Flux.exe" DestinationFolder="$(MSBuildProjectDirectory)\oasyss-flux-windows\Release\" Condition="Exists('$(PublishDir)Oasyss Flux.exe')" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3351.48" />
+    <PackageReference Include="Microsoft.Windows.Compatibility" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="plus.png" />
+    <Resource Include="screenshots.png" />
+    <Resource Include="settings.png" />
+    <Resource Include="refresh.png" />
+    <Resource Include="loading.png" />
+    <Resource Include="x.png" />
+    <Resource Include="minimize.png" />
+    <Resource Include="sound.png" />
+    <Resource Include="muted.png" />
+    <Resource Include="logo.png" />
+    <Resource Include="intro.mp4" />
+    <Resource Include="app.ico" />
+    <Resource Include="chrome.ico" />
+    <Resource Include="chrome.png" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,4075 @@
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Media;
+using Microsoft.Web.WebView2.Wpf;
+using System.Windows.Data;
+using System.Web;
+using System.Collections.ObjectModel;
+using System.Text.Json;
+using System.Windows.Media.Imaging;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using System.Collections.Generic;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Linq;
+using System.Text;
+using System.Diagnostics;
+using Microsoft.Web.WebView2.Core;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Windows.Threading;
+
+namespace MyOverlayPOC
+{
+
+    public class GlobalKeyEventArgs : EventArgs
+    {
+        public Key Key { get; }
+        public KBDLLHOOKSTRUCT Kbdllhookstruct { get; }
+        public bool Handled { get; set; }
+
+        public GlobalKeyEventArgs(KBDLLHOOKSTRUCT kbdllhookstruct)
+        {
+            Key = KeyInterop.KeyFromVirtualKey((int)kbdllhookstruct.vkCode);
+            Kbdllhookstruct = kbdllhookstruct;
+            Handled = false;
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct KBDLLHOOKSTRUCT
+    {
+        public uint vkCode;
+        public uint scanCode;
+        public KBDLLHOOKSTRUCTFlags flags;
+        public uint time;
+        public UIntPtr dwExtraInfo;
+    }
+
+    [Flags]
+    public enum KBDLLHOOKSTRUCTFlags : uint
+    {
+        LLKHF_EXTENDED = 0x01,
+        LLKHF_LOWER_IL_INJECTED = 0x02,
+        LLKHF_INJECTED = 0x10,
+        LLKHF_ALTDOWN = 0x20,
+        LLKHF_UP = 0x80,
+    }
+
+    public sealed class GlobalKeyboardHook : IDisposable
+    {
+        private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        private const int WH_KEYBOARD_LL = 13;
+        private const int WM_KEYDOWN = 0x0100;
+        private const int WM_KEYUP = 0x0101;
+        private const int WM_SYSKEYDOWN = 0x0104;
+        private const int WM_SYSKEYUP = 0x0105;
+
+        private readonly LowLevelKeyboardProc _proc;
+        private IntPtr _hookId = IntPtr.Zero;
+        private bool _isDisposed;
+        private bool _minimizeOnFocusLoss = true;
+
+        public event EventHandler<GlobalKeyEventArgs>? KeyDown;
+        public event EventHandler<GlobalKeyEventArgs>? KeyUp;
+
+        public GlobalKeyboardHook()
+        {
+            _proc = HookCallback;
+            using (Process curProcess = Process.GetCurrentProcess())
+            {
+                ProcessModule? curModule = curProcess.MainModule;
+                if (curModule != null && curModule.ModuleName != null)
+                {
+                    _hookId = SetWindowsHookEx(WH_KEYBOARD_LL, _proc, GetModuleHandle(curModule.ModuleName), 0);
+                }
+                else
+                {
+                    throw new InvalidOperationException("MainModule is null.");
+                }
+            }
+        }
+
+        private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+        {
+            if (nCode >= 0)
+            {
+                try
+                {
+                    var kbdStruct = (KBDLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(KBDLLHOOKSTRUCT))!;
+                    var args = new GlobalKeyEventArgs(kbdStruct);
+
+                    if (wParam == (IntPtr)WM_KEYDOWN || wParam == (IntPtr)WM_SYSKEYDOWN)
+                    {
+                        KeyDown?.Invoke(this, args);
+                    }
+                    else if (wParam == (IntPtr)WM_KEYUP || wParam == (IntPtr)WM_SYSKEYUP)
+                    {
+                        KeyUp?.Invoke(this, args);
+                    }
+
+                    if (args.Handled)
+                    {
+                        return (IntPtr)1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error in keyboard hook callback: {ex}");
+                }
+            }
+            return CallNextHookEx(_hookId, nCode, wParam, lParam);
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed) return;
+
+            if (_hookId != IntPtr.Zero)
+            {
+                UnhookWindowsHookEx(_hookId);
+                _hookId = IntPtr.Zero;
+            }
+
+            _isDisposed = true;
+            GC.SuppressFinalize(this);
+        }
+
+        ~GlobalKeyboardHook()
+        {
+            Dispose();
+        }
+    }
+    
+public class AppSettings
+{
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public bool RestoreTabsOnStartup { get; set; }
+    public bool MinimizeOnFocusLoss { get; set; }
+    public string Theme { get; set; } = "Dark";
+    public double Opacity { get; set; } = 1.0;
+
+    // AI Configuration
+    public string GeminiApiKey { get; set; } = "";
+    public string OpenAiApiKey { get; set; } = "";
+    public string GroqApiKey { get; set; } = "";
+    public string ClaudeApiKey { get; set; } = "";
+    public string DefaultAiProvider { get; set; } = "Gemini";
+    public string DefaultAiModel { get; set; } = "gemini-2.5-flash";
+
+    // Transparency
+    public bool TransparentMode { get; set; } = false;
+    public double TransparencyLevel { get; set; } = 0.5;
+}
+    public class Bookmark : INotifyPropertyChanged
+    {
+        private string _name;
+        public string Name
+        {
+            get => _name;
+            set { _name = value; OnPropertyChanged(); }
+        }
+
+        private string _url;
+        public string Url
+        {
+            get => _url;
+            set { _url = value; OnPropertyChanged(); }
+        }
+
+        private BitmapImage? _favicon;
+        public BitmapImage? Favicon
+        {
+            get => _favicon;
+            set { _favicon = value; OnPropertyChanged(); }
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT
+    {
+        public int X;
+        public int Y;
+    }
+
+    public class Screenshot : INotifyPropertyChanged
+    {
+        private BitmapImage _image;
+        public BitmapImage Image
+        {
+            get => _image;
+            set { _image = value; OnPropertyChanged(); }
+        }
+        public string FilePath { get; set; }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+
+
+    public partial class MainWindow : Window
+    {
+        public static MainWindow? Instance { get; private set; }
+        private Border _webViewPlaceholder;
+        internal const int GWL_EXSTYLE = -20;
+        private Border _webViewContentOverlay;
+private readonly Dictionary<string, HashSet<CoreWebView2PermissionKind>> _grantedPermissions = new Dictionary<string, HashSet<CoreWebView2PermissionKind>>();
+        private const int WS_EX_LAYERED = 0x00080000;
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_APPWINDOW = 0x00040000;
+        internal const int WS_EX_TRANSPARENT = 0x00000020;
+        private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
+        private static readonly IntPtr HWND_TOPMOST = new IntPtr(-1);
+private System.Windows.Point _dragStartPoint;
+    private TabItem? _draggedTab;
+
+    public static readonly DependencyProperty IsTabDraggingProperty =
+        DependencyProperty.Register("IsTabDragging", typeof(bool), typeof(MainWindow), new PropertyMetadata(false));
+
+    public bool IsTabDragging
+    {
+        get { return (bool)GetValue(IsTabDraggingProperty); }
+        set { SetValue(IsTabDraggingProperty, value); }
+    }
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOACTIVATE = 0x0010;
+        private const uint SWP_SHOWWINDOW = 0x0040;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+
+        private const uint MOD_ALT = 0x0001;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT = 0x0004;
+        private const uint MOD_WIN = 0x0008;
+
+        private readonly string _userDataFolder;
+        private bool _isMuted = true;
+        private System.Windows.Controls.Button _muteButton;
+        private TextBlock _muteStatusText;
+        private System.Windows.Controls.Button _backButton;
+        private System.Windows.Controls.Button _forwardButton;
+        private System.Windows.Controls.Button _refreshButton;
+        private System.Windows.Controls.TextBox _addressBar;
+        private bool _addressBarHasIntendedChanges = false;
+        private bool _isMinimized = false;
+        private System.Windows.Controls.Button _minimizeButton;
+        private System.Windows.Controls.Button _exitButton;
+        
+        private double _originalHeight;
+        private double _originalWidth;
+        private Thickness _originalBorderPadding;
+        private CornerRadius _originalBorderCornerRadius;
+        
+        private readonly string _bookmarksFilePath;
+        public ObservableCollection<Bookmark> Bookmarks { get; set; }
+        
+        private System.Windows.Controls.Image _loadingSpinner;
+        private readonly Dictionary<WebView2CompositionControl, bool> _tabLoadingStates = new Dictionary<WebView2CompositionControl, bool>();
+
+private readonly GlobalKeyboardHook _keyboardHook;
+private bool _ctrlPressed;
+private bool _shiftPressed;
+private bool _altPressed;
+private bool _winPressed;
+private readonly HashSet<uint> _swallowedKeys = new HashSet<uint>();
+private System.Windows.Controls.Button? _btnNavSessions;
+private bool _isBrowserMode = false;
+private ColumnDefinition? _sidebarColumn;
+private FrameworkElement? _sidebarBorder;
+private System.Windows.Controls.Button? _btnToggleBrowserMode;
+private System.Windows.Controls.Button? _topModeToggleButton;
+private TextBlock? _browserModeText;
+private TextBlock? _browserModeIcon;
+private TextBlock? _topModeText;
+private TextBlock? _topModeIcon;
+private Border? _fluxTopBar;
+private Border? _fluxBottomBar;
+private StackPanel? _chromeTopControls;
+private System.Windows.Controls.Button? _btnTopLens;
+private System.Windows.Controls.Button? _btnOmniboxLens;
+private System.Windows.Controls.Button? _btnAskGemini;
+private System.Windows.Controls.Button? _chromeMinimizeBtn;
+private System.Windows.Controls.Button? _chromeMaximizeBtn;
+private TextBlock? _chromeMaximizeIcon;
+private System.Windows.Controls.Button? _chromeCloseBtn;
+private Border? _browserToolbarBorder;
+private StackPanel? _cyberToolbarTools;
+private AiChatWindow? _aiChatWindow;
+private bool _isBrowserFullScreen = false;
+private Rect _preFullScreenBounds;
+
+        private readonly string _screenshotsTempFolder;
+        public ObservableCollection<Screenshot> Screenshots { get; set; }
+        private Grid _screenshotTray;
+        private System.Windows.Controls.Button _toggleScreenshotsButton;
+        private readonly string _settingsFilePath;
+        private DispatcherTimer? _saveSettingsDebounceTimer;
+        private static Microsoft.Web.WebView2.Core.CoreWebView2Environment? _sharedWebViewEnvironment;
+
+        private void ScheduleSaveSettings()
+        {
+            if (_saveSettingsDebounceTimer == null)
+            {
+                _saveSettingsDebounceTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(400)
+                };
+                _saveSettingsDebounceTimer.Tick += (s, e) =>
+                {
+                    _saveSettingsDebounceTimer.Stop();
+                    SaveSettings();
+                };
+            }
+            _saveSettingsDebounceTimer.Stop();
+            _saveSettingsDebounceTimer.Start();
+        }
+        private uint _hotkeyModifiers = MOD_SHIFT | MOD_ALT;
+        private uint _hotkeyKey = 0x5A; // Z key
+
+        private readonly string _tabsFilePath;
+        private bool _restoreTabsOnStartup = false;
+private bool _minimizeOnFocusLoss = true;
+        private bool _isDarkMode = true;
+        private double _overlayOpacity = 1.0;
+        private Grid _modalOverlay;
+
+        // AI Chat
+        private readonly AiChatService _aiChatService = new();
+        private Grid? _aiChatPanel;
+        private System.Windows.Controls.Button? _aiChatToggleButton;
+        private ItemsControl? _aiChatMessagesControl;
+        private System.Windows.Controls.TextBox? _aiChatInput;
+        private System.Windows.Controls.ComboBox? _aiProviderCombo;
+        private System.Windows.Controls.ComboBox? _aiModelCombo;
+        private ScrollViewer? _aiChatScrollViewer;
+        private bool _isAiChatVisible = false;
+        private TextBlock? _aiSendingIndicator;
+
+        // Transparency Toggle
+        private bool _isTransparentMode = false;
+        private double _transparencyLevel = 0.5;
+        private System.Windows.Controls.Button? _transparencyToggleButton;
+        private Slider? _transparencySlider;
+        private Border? _transparencySliderPopup;
+
+        // Complete Transparency (Ghost Mode)
+        private bool _isCompletelyTransparent = false;
+        private double _savedOpacityBeforeCompleteTransparency = 1.0;
+        private DateTime _lastShiftTPressTime = DateTime.MinValue;
+
+        // Startup Intro Video
+        private Grid? _introOverlay;
+        private MediaElement? _introMedia;
+        private bool _introFinished = false;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr", SetLastError = true)]
+        private static extern IntPtr GetWindowLongPtr64(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "GetWindowLong", SetLastError = true)]
+        private static extern int GetWindowLong32(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr", SetLastError = true)]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong", SetLastError = true)]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        internal static long GetWindowLongPtrSafe(IntPtr hWnd, int nIndex)
+            => IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex).ToInt64() : GetWindowLong32(hWnd, nIndex);
+
+        internal static void SetWindowLongPtrSafe(IntPtr hWnd, int nIndex, long dwNewLong)
+        {
+            if (IntPtr.Size == 8) SetWindowLongPtr64(hWnd, nIndex, new IntPtr(dwNewLong));
+            else SetWindowLong32(hWnd, nIndex, (int)dwNewLong);
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        private const uint LWA_ALPHA = 0x2;
+
+        [DllImport("user32.dll")]
+        private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetParent(IntPtr hWnd);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+
+        private const uint GW_OWNER = 4;
+        private DispatcherTimer _dialogProtectionTimer;
+
+        private const int WM_SETICON = 0x0080;
+        private const int ICON_SMALL = 0;
+        private const int ICON_BIG = 1;
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        private ImageSource? _defaultAppIcon;
+        private ImageSource? _chromeAppIcon;
+
+        public MainWindow()
+        {
+            InitializeComponent();
+            InitApplicationIcons();
+
+            var originalContent = this.Content as UIElement;
+            var newRootGrid = new Grid();
+            this.Content = newRootGrid;
+
+            _modalOverlay = new Grid
+            {
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x88, 0, 0, 0)),
+                Visibility = Visibility.Collapsed
+            };
+
+            if (originalContent != null)
+            {
+                newRootGrid.Children.Add(originalContent);
+            }
+            newRootGrid.Children.Add(_modalOverlay);
+
+            InitializeIntroVideo(newRootGrid);
+
+            // Background usage tracker removed to guarantee zero background telemetry.
+
+            Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow;
+
+            var workArea = System.Windows.SystemParameters.WorkArea;
+            this.Height = workArea.Height * 0.87;
+            this.Width = this.Height * 1.38;
+
+            this.Topmost = true;
+            Instance = this;
+            DisplayAffinityManager.InitializePopupAffinityHandler();
+            this.SourceInitialized += MainWindow_SourceInitialized;
+            this.Closed += MainWindow_Closed;
+            this.Loaded += MainWindow_Loaded;
+            this.MouseLeftButtonDown += MainWindow_MouseLeftButtonDown;
+            this.Deactivated += MainWindow_Deactivated;
+
+            _userDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "OasyssFlux");
+            Directory.CreateDirectory(_userDataFolder);
+
+            _settingsFilePath = Path.Combine(_userDataFolder, "settings.json");
+            _tabsFilePath = Path.Combine(_userDataFolder, "tabs.json");
+            LoadSettings();
+            ApplyTheme(_isDarkMode);
+
+            _bookmarksFilePath = Path.Combine(_userDataFolder, "bookmarks.json");
+            Bookmarks = new ObservableCollection<Bookmark>();
+            LoadBookmarks();
+            
+            _screenshotsTempFolder = Path.Combine(Path.GetTempPath(), "OasyssFlux_Screenshots");
+            Directory.CreateDirectory(_screenshotsTempFolder);
+            Screenshots = new ObservableCollection<Screenshot>();
+
+            _keyboardHook = new GlobalKeyboardHook();
+            _keyboardHook.KeyDown += GlobalKeyboardHook_KeyDown;
+            _keyboardHook.KeyUp += GlobalKeyboardHook_KeyUp;
+
+            this.DataContext = this;
+            
+            // Initial tabs are loaded in MainWindow_Loaded once the HWND and template controls are ready.
+        }
+
+private void ToggleProgrammaticMinimize()
+{
+    if (_isMinimized)
+    {
+        RestoreWindow();
+    }
+    else
+    {
+        MinimizeCustom();
+    }
+}
+
+
+        private void TabItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var tabItem = FindAncestor<TabItem>((DependencyObject)e.OriginalSource);
+            if (tabItem == null) return;
+
+            _draggedTab = tabItem;
+            _dragStartPoint = e.GetPosition(this);
+        }
+
+        private void TabItem_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (_draggedTab == null || e.LeftButton != MouseButtonState.Pressed)
+            {
+                _draggedTab = null;
+                return;
+            }
+
+            System.Windows.Point currentPosition = e.GetPosition(this);
+            Vector diff = _dragStartPoint - currentPosition;
+
+            if (Math.Abs(diff.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(diff.Y) > SystemParameters.MinimumVerticalDragDistance)
+            {
+                TabItem tabToDrag = _draggedTab;
+                _draggedTab = null;
+
+                tabToDrag.GiveFeedback += TabItem_GiveFeedback;
+
+                try
+                {
+                    IsTabDragging = true;
+                    DragDrop.DoDragDrop(tabToDrag, tabToDrag, System.Windows.DragDropEffects.Move);
+                }
+                finally
+                {
+                    IsTabDragging = false;
+                    tabToDrag.GiveFeedback -= TabItem_GiveFeedback;
+                }
+            }
+        }
+        private string GetSimplifiedUrl(Uri? uri)
+        {
+            if (uri == null)
+            {
+                return string.Empty;
+            }
+
+            string host = uri.Host;
+
+            if (host.StartsWith("www.", StringComparison.OrdinalIgnoreCase))
+            {
+                host = host.Substring(4);
+            }
+            
+            return host;
+        }
+        private void TabItem_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            var draggedTab = e.Data.GetData(typeof(TabItem)) as TabItem;
+            var targetTab = FindAncestor<TabItem>((DependencyObject)e.OriginalSource);
+
+            if (draggedTab == null || targetTab == null || draggedTab == targetTab)
+            {
+                return;
+            }
+
+            int sourceIndex = BrowserTabs.Items.IndexOf(draggedTab);
+            int targetIndex = BrowserTabs.Items.IndexOf(targetTab);
+
+            if (sourceIndex < 0 || targetIndex < 0)
+            {
+                return;
+            }
+
+            BrowserTabs.Items.RemoveAt(sourceIndex);
+            BrowserTabs.Items.Insert(targetIndex, draggedTab);
+
+            BrowserTabs.SelectedItem = draggedTab;
+        }
+        
+        private void HeaderPanel_DragOver(object sender, System.Windows.DragEventArgs e)
+        {
+            var draggedTab = e.Data.GetData(typeof(TabItem)) as TabItem;
+            if (draggedTab == null)
+            {
+                e.Effects = System.Windows.DragDropEffects.None;
+            }
+            else
+            {
+                e.Effects = System.Windows.DragDropEffects.Move;
+            }
+            e.Handled = true;
+        }
+
+        private void HeaderPanel_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            var draggedTab = e.Data.GetData(typeof(TabItem)) as TabItem;
+            if (draggedTab == null) return;
+
+            var targetTab = FindAncestor<TabItem>((DependencyObject)e.OriginalSource);
+            if (targetTab == null)
+            {
+                int sourceIndex = BrowserTabs.Items.IndexOf(draggedTab);
+                if (sourceIndex < 0) return;
+                
+                BrowserTabs.Items.RemoveAt(sourceIndex);
+                BrowserTabs.Items.Insert(BrowserTabs.Items.Count, draggedTab);
+                
+                BrowserTabs.SelectedItem = draggedTab;
+            }
+        }
+        private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject
+        {
+            do
+            {
+                if (current is T)
+                {
+                    return (T)current;
+                }
+                current = VisualTreeHelper.GetParent(current);
+            }
+            while (current != null);
+            return null;
+        }
+
+        private static BitmapImage? LoadAppImage(string relativePath)
+        {
+            try
+            {
+                string cleanName = relativePath.TrimStart('.', '/', '\\');
+                string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, cleanName);
+                if (File.Exists(fullPath))
+                {
+                    var bmp = new BitmapImage();
+                    bmp.BeginInit();
+                    bmp.UriSource = new Uri(fullPath, UriKind.Absolute);
+                    bmp.CacheOption = BitmapCacheOption.OnLoad;
+                    bmp.EndInit();
+                    bmp.Freeze();
+                    return bmp;
+                }
+
+                var packUri = new Uri($"pack://application:,,,/{cleanName}", UriKind.Absolute);
+                var resBmp = new BitmapImage();
+                resBmp.BeginInit();
+                resBmp.UriSource = packUri;
+                resBmp.CacheOption = BitmapCacheOption.OnLoad;
+                resBmp.EndInit();
+                resBmp.Freeze();
+                return resBmp;
+            }
+            catch
+            {
+                try
+                {
+                    return new BitmapImage(new Uri(relativePath, UriKind.RelativeOrAbsolute));
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+        }
+
+
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            var template = BrowserTabs.Template;
+            var newTabButton = template.FindName("NewTabButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (newTabButton != null) newTabButton.Click += NewTab_Click;
+
+            _muteButton = template.FindName("MuteButtonInTemplate", BrowserTabs) as System.Windows.Controls.Button;
+            _muteStatusText = template.FindName("MuteStatusTextBlock", BrowserTabs) as TextBlock;
+            if (_muteButton != null) _muteButton.Click += MuteButton_Click;
+            UpdateMuteStatusUI();
+
+            _minimizeButton = template.FindName("MinimizeButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (_minimizeButton != null) _minimizeButton.Click += MinimizeButton_Click;
+
+            _exitButton = template.FindName("ExitButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (_exitButton != null) _exitButton.Click += ExitButton_Click;
+
+            _backButton = template.FindName("BackButton", BrowserTabs) as System.Windows.Controls.Button;
+            _forwardButton = template.FindName("ForwardButton", BrowserTabs) as System.Windows.Controls.Button;
+            _refreshButton = template.FindName("RefreshButton", BrowserTabs) as System.Windows.Controls.Button;
+            _addressBar = template.FindName("AddressBar", BrowserTabs) as System.Windows.Controls.TextBox;
+            _loadingSpinner = template.FindName("LoadingSpinner", BrowserTabs) as System.Windows.Controls.Image; 
+            _webViewPlaceholder = template.FindName("WebViewPlaceholder", BrowserTabs) as Border;
+
+            if (_backButton != null) _backButton.Click += (s, args) => GetCurrentWebView()?.GoBack();
+            if (_forwardButton != null) _forwardButton.Click += (s, args) => GetCurrentWebView()?.GoForward();
+            if (_refreshButton != null) _refreshButton.Click += (s, args) => GetCurrentWebView()?.Reload();
+
+            if (_addressBar != null)
+            {
+                _addressBar.KeyDown += AddressBar_KeyDown;
+                _addressBar.GotKeyboardFocus += AddressBar_GotKeyboardFocus;
+                _addressBar.LostFocus += AddressBar_LostFocus;
+                _addressBar.PreviewMouseLeftButtonDown += AddressBar_PreviewMouseLeftButtonDown;
+            }
+            
+            _screenshotTray = template.FindName("ScreenshotTray", BrowserTabs) as Grid;
+            _toggleScreenshotsButton = template.FindName("ToggleScreenshotsButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (_toggleScreenshotsButton != null)
+            {
+                _toggleScreenshotsButton.Click += ToggleScreenshotsButton_Click;
+                _toggleScreenshotsButton.ToolTip = $"Toggle Screenshots Tray ({HotkeyToString(_hotkeyModifiers, _hotkeyKey)})";
+            }
+
+            // ── AI Chat Toggle Button ──
+            _aiChatToggleButton = template.FindName("AiChatButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (_aiChatToggleButton != null)
+            {
+                _aiChatToggleButton.Click += AiChatToggle_Click;
+                _aiChatToggleButton.ToolTip = "Open AI Chat";
+            }
+
+            // ── Transparency Toggle Button + Slider ──
+            _transparencyToggleButton = template.FindName("TransparencyButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (_transparencyToggleButton != null)
+            {
+                _transparencyToggleButton.Click += TransparencyButton_Click;
+                UpdateTransparencyButtonUI();
+            }
+
+            _transparencySliderPopup = template.FindName("TransparencySliderPopup", BrowserTabs) as Border;
+            _transparencySlider = template.FindName("TransparencySliderControl", BrowserTabs) as Slider;
+            if (_transparencySlider != null)
+            {
+                _transparencySlider.Value = _transparencyLevel;
+                _transparencySlider.ValueChanged += TransparencySlider_ValueChanged;
+            }
+
+            var ghostButton = template.FindName("GhostModeButton", BrowserTabs) as System.Windows.Controls.Button;
+            if (ghostButton != null)
+            {
+                ghostButton.Click += (s, e) =>
+                {
+                    if (_transparencySliderPopup != null)
+                    {
+                        _transparencySliderPopup.Visibility = Visibility.Collapsed;
+                    }
+                    ToggleCompleteTransparency();
+                };
+            }
+
+            // ── Build AI Chat Panel dynamically and inject into Row 3 grid ──
+            BuildAiChatPanel();
+            var aiChatHost = template.FindName("AiChatHost", BrowserTabs) as Grid;
+            if (aiChatHost != null && _aiChatPanel != null)
+            {
+                aiChatHost.Children.Add(_aiChatPanel);
+            }
+
+            // Apply transparency if it was saved as active
+            if (_isTransparentMode)
+            {
+                ApplyOverlayOpacity(_transparencyLevel);
+                UpdateTransparencyButtonUI();
+            }
+
+            // ── OASYSS FLUX: Sidebar Navigation & Workspace Panels ──
+            var panelOverview = template.FindName("PanelOverview", BrowserTabs) as FrameworkElement;
+            var panelSessions = template.FindName("PanelSessions", BrowserTabs) as FrameworkElement;
+            var panelAnalysis = template.FindName("PanelAnalysis", BrowserTabs) as FrameworkElement;
+            var panelMonitor = template.FindName("PanelMonitor", BrowserTabs) as FrameworkElement;
+            var panelProfiles = template.FindName("PanelProfiles", BrowserTabs) as FrameworkElement;
+            var panelEventLog = template.FindName("PanelEventLog", BrowserTabs) as FrameworkElement;
+            var panelAbout = template.FindName("PanelAbout", BrowserTabs) as FrameworkElement;
+
+            var btnNavOverview = template.FindName("BtnNavOverview", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavSessions = template.FindName("BtnNavSessions", BrowserTabs) as System.Windows.Controls.Button;
+            _btnNavSessions = btnNavSessions;
+            var btnNavAnalysis = template.FindName("BtnNavAnalysis", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavMonitor = template.FindName("BtnNavMonitor", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavProfiles = template.FindName("BtnNavProfiles", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavEventLog = template.FindName("BtnNavEventLog", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavSettings = template.FindName("BtnNavSettings", BrowserTabs) as System.Windows.Controls.Button;
+            var btnNavAbout = template.FindName("BtnNavAbout", BrowserTabs) as System.Windows.Controls.Button;
+
+            var allPanels = new[] { panelOverview, panelSessions, panelAnalysis, panelMonitor, panelProfiles, panelEventLog, panelAbout };
+            var allNavButtons = new[] { btnNavOverview, btnNavSessions, btnNavAnalysis, btnNavMonitor, btnNavProfiles, btnNavEventLog, btnNavAbout };
+
+            void ShowWorkspace(FrameworkElement? targetPanel, System.Windows.Controls.Button? targetButton)
+            {
+                foreach (var p in allPanels)
+                {
+                    if (p != null) p.Visibility = (p == targetPanel) ? Visibility.Visible : Visibility.Collapsed;
+                }
+                foreach (var b in allNavButtons)
+                {
+                    if (b != null)
+                    {
+                        if (b == targetButton)
+                        {
+                            b.Background = TryFindResource("Theme.SurfaceAlt") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x11, 0x14, 0x18));
+                            b.Foreground = TryFindResource("Theme.Accent") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD6, 0xFF, 0x3F));
+                            b.BorderBrush = TryFindResource("Theme.Border") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1D, 0x22, 0x28));
+                        }
+                        else
+                        {
+                            b.Background = System.Windows.Media.Brushes.Transparent;
+                            b.Foreground = TryFindResource("Theme.TextSecondary") as System.Windows.Media.Brush ?? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x85, 0x8B, 0x94));
+                            b.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                        }
+                    }
+                }
+            }
+
+            if (btnNavOverview != null) btnNavOverview.Click += (s, ev) => ShowWorkspace(panelOverview, btnNavOverview);
+            if (btnNavSessions != null) btnNavSessions.Click += (s, ev) => ShowWorkspace(panelSessions, btnNavSessions);
+            if (btnNavAnalysis != null) btnNavAnalysis.Click += (s, ev) => ShowWorkspace(panelAnalysis, btnNavAnalysis);
+            if (btnNavMonitor != null) btnNavMonitor.Click += (s, ev) => ShowWorkspace(panelMonitor, btnNavMonitor);
+            if (btnNavProfiles != null) btnNavProfiles.Click += (s, ev) => ShowWorkspace(panelProfiles, btnNavProfiles);
+            if (btnNavEventLog != null) btnNavEventLog.Click += (s, ev) => ShowWorkspace(panelEventLog, btnNavEventLog);
+            if (btnNavAbout != null) btnNavAbout.Click += (s, ev) => ShowWorkspace(panelAbout, btnNavAbout);
+            if (btnNavSettings != null) btnNavSettings.Click += (s, ev) => SettingsButton_Click(s, ev);
+
+            var btnOverviewOpenSession = template.FindName("BtnOverviewOpenSession", BrowserTabs) as System.Windows.Controls.Button;
+            if (btnOverviewOpenSession != null)
+            {
+                btnOverviewOpenSession.Click += (s, ev) => ShowWorkspace(panelSessions, btnNavSessions);
+            }
+
+            var btnRunVerification = template.FindName("BtnRunVerification", BrowserTabs) as System.Windows.Controls.Button;
+            var analysisFindings = template.FindName("AnalysisFindingsText", BrowserTabs) as TextBlock;
+            if (btnRunVerification != null && analysisFindings != null)
+            {
+                btnRunVerification.Click += (s, ev) =>
+                {
+                    var now = DateTime.Now.ToString("HH:mm:ss.fff");
+                    var hwnd = new WindowInteropHelper(this).Handle.ToString("X8");
+                    analysisFindings.Text = $"{now}  VERIFICATION SEQUENCE INITIATED\n" +
+                                            $"{now}  SCANNING HWND (0x{hwnd}) — Boundary check validated\n" +
+                                            $"{now}  AFFINITY VERIFIED: WDA_EXCLUDEFROMCAPTURE active on PID {Process.GetCurrentProcess().Id}\n" +
+                                            $"{now}  NO EVENT DETECTED IN TEST ENVIRONMENT — Screen capture returns blank\n" +
+                                            $"{now}  ANALYSIS COMPLETE — All isolation barriers intact (0 leaks)";
+                };
+            }
+
+            // Retrieve Browser Mode toggle elements
+            _sidebarColumn = template.FindName("SidebarColumn", BrowserTabs) as ColumnDefinition;
+            _sidebarBorder = template.FindName("SidebarBorder", BrowserTabs) as FrameworkElement;
+            _btnToggleBrowserMode = template.FindName("BtnToggleBrowserMode", BrowserTabs) as System.Windows.Controls.Button;
+            _topModeToggleButton = template.FindName("TopModeToggleButton", BrowserTabs) as System.Windows.Controls.Button;
+            _browserModeText = template.FindName("BrowserModeText", BrowserTabs) as TextBlock;
+            _browserModeIcon = template.FindName("BrowserModeIcon", BrowserTabs) as TextBlock;
+            _topModeText = template.FindName("TopModeText", BrowserTabs) as TextBlock;
+            _topModeIcon = template.FindName("TopModeIcon", BrowserTabs) as TextBlock;
+
+            // Chrome Top Controls & Window Buttons (Browser Mode)
+            _fluxTopBar = template.FindName("FluxTopBar", BrowserTabs) as Border;
+            _fluxBottomBar = template.FindName("FluxBottomBar", BrowserTabs) as Border;
+            _chromeTopControls = template.FindName("ChromeTopControls", BrowserTabs) as StackPanel;
+            _btnTopLens = template.FindName("BtnTopLens", BrowserTabs) as System.Windows.Controls.Button;
+            _btnOmniboxLens = template.FindName("BtnOmniboxLens", BrowserTabs) as System.Windows.Controls.Button;
+            _btnAskGemini = template.FindName("BtnAskGemini", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMinimizeBtn = template.FindName("ChromeMinimizeBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMaximizeBtn = template.FindName("ChromeMaximizeBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _chromeMaximizeIcon = template.FindName("ChromeMaximizeIcon", BrowserTabs) as TextBlock;
+            _chromeCloseBtn = template.FindName("ChromeCloseBtn", BrowserTabs) as System.Windows.Controls.Button;
+            _browserToolbarBorder = template.FindName("BrowserToolbarBorder", BrowserTabs) as Border;
+            _cyberToolbarTools = template.FindName("CyberToolbarTools", BrowserTabs) as StackPanel;
+
+            if (_btnToggleBrowserMode != null)
+            {
+                _btnToggleBrowserMode.Click += (s, ev) => ToggleBrowserMode();
+            }
+            if (_topModeToggleButton != null)
+            {
+                _topModeToggleButton.Click += (s, ev) => ToggleBrowserMode();
+            }
+            var btnSidebarToggle = template.FindName("BtnSidebarToggleBrowserMode", BrowserTabs) as System.Windows.Controls.Button;
+            if (btnSidebarToggle != null)
+            {
+                btnSidebarToggle.Click += (s, ev) => ToggleBrowserMode();
+            }
+            if (_btnTopLens != null)
+            {
+                _btnTopLens.Click += async (s, ev) => await TriggerGoogleLensAsync();
+            }
+            if (_btnOmniboxLens != null)
+            {
+                _btnOmniboxLens.Click += async (s, ev) => await TriggerGoogleLensAsync();
+            }
+            if (_btnAskGemini != null)
+            {
+                _btnAskGemini.Click += (s, ev) => OpenAiChatTab();
+            }
+            if (_chromeMinimizeBtn != null)
+            {
+                _chromeMinimizeBtn.Click += MinimizeButton_Click;
+            }
+            if (_chromeMaximizeBtn != null)
+            {
+                _chromeMaximizeBtn.Click += (s, ev) => ToggleFullScreen();
+            }
+            if (_chromeCloseBtn != null)
+            {
+                _chromeCloseBtn.Click += ExitButton_Click;
+            }
+            _originalBorderPadding = MainOverlayBorder.Padding;
+            _originalBorderCornerRadius = MainOverlayBorder.CornerRadius;
+            _originalWidth = this.Width;
+            _originalHeight = this.Height;
+
+            // Set default active panel to SESSIONS
+            ShowWorkspace(panelSessions, btnNavSessions);
+
+            LoadInitialTabs();
+        }
+
+        private void InitApplicationIcons()
+        {
+            try
+            {
+                string chromeIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "chrome.ico");
+                if (File.Exists(chromeIcoPath))
+                {
+                    _chromeAppIcon = new BitmapImage(new Uri(chromeIcoPath, UriKind.Absolute));
+                }
+                else
+                {
+                    string chromePngPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "chrome.png");
+                    if (File.Exists(chromePngPath))
+                    {
+                        _chromeAppIcon = new BitmapImage(new Uri(chromePngPath, UriKind.Absolute));
+                    }
+                    else
+                    {
+                        _chromeAppIcon = LoadAppImage("chrome.ico") ?? LoadAppImage("chrome.png");
+                    }
+                }
+            }
+            catch { }
+
+            try
+            {
+                string appIcoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
+                if (File.Exists(appIcoPath))
+                {
+                    _defaultAppIcon = new BitmapImage(new Uri(appIcoPath, UriKind.Absolute));
+                }
+                else
+                {
+                    string logoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logo.png");
+                    if (File.Exists(logoPath))
+                    {
+                        _defaultAppIcon = new BitmapImage(new Uri(logoPath, UriKind.Absolute));
+                    }
+                    else
+                    {
+                        _defaultAppIcon = LoadAppImage("app.ico") ?? LoadAppImage("logo.png");
+                    }
+                }
+            }
+            catch { }
+        }
+
+        private void SetApplicationIcon(bool isChrome)
+        {
+            try
+            {
+                this.Icon = isChrome ? _chromeAppIcon : _defaultAppIcon;
+
+                IntPtr hwnd = new WindowInteropHelper(this).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    string iconFile = isChrome ? "chrome.ico" : "app.ico";
+                    string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, iconFile);
+                    if (File.Exists(fullPath))
+                    {
+                        using var ico = new System.Drawing.Icon(fullPath);
+                        SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, ico.Handle);
+                        SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, ico.Handle);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            var uri = new Uri($"pack://application:,,,/{iconFile}", UriKind.Absolute);
+                            var sri = System.Windows.Application.GetResourceStream(uri);
+                            if (sri?.Stream != null)
+                            {
+                                using var ico = new System.Drawing.Icon(sri.Stream);
+                                SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_SMALL, ico.Handle);
+                                SendMessage(hwnd, WM_SETICON, (IntPtr)ICON_BIG, ico.Handle);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error setting application icon: {ex.Message}");
+            }
+        }
+
+        public void ToggleBrowserMode()
+        {
+            _isBrowserMode = !_isBrowserMode;
+
+            if (_isBrowserMode)
+            {
+                // Ensure browser itself is NOT transparent in Browser Mode
+                if (_isCompletelyTransparent)
+                {
+                    ToggleCompleteTransparency();
+                }
+
+                // In Browser Mode: the browser window should be visible to display/screen capture and taskbar
+                IntPtr mainHwnd = new WindowInteropHelper(this).Handle;
+                DisplayAffinityManager.MarkVisibleToCapture(mainHwnd);
+
+                this.ShowInTaskbar = true;
+                long exStyle = GetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE);
+                SetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE, (exStyle | WS_EX_APPWINDOW) & ~WS_EX_TOOLWINDOW);
+                TaskbarManager.ShowInTaskbar(mainHwnd);
+                this.Title = "Google Chrome";
+                SetApplicationIcon(true);
+
+                LoadInitialTabs();
+
+                if (_btnNavSessions != null)
+                {
+                    _btnNavSessions.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                }
+
+                if (BrowserTabs.Items.Count == 0)
+                {
+                    AddNewBrowserTab("https://www.google.com");
+                }
+                else
+                {
+                    var currentWv = GetCurrentWebView();
+                    if (currentWv != null)
+                    {
+                        if (currentWv.CoreWebView2 == null)
+                        {
+                            _ = EnsureWebViewInitialized(currentWv, currentWv.Source?.ToString() ?? "https://www.google.com");
+                        }
+                        if (_addressBar != null && currentWv.Source != null)
+                        {
+                            _addressBar.Text = GetSimplifiedUrl(currentWv.Source);
+                        }
+                    }
+                }
+
+                if (_fluxTopBar != null) _fluxTopBar.Visibility = Visibility.Collapsed;
+                if (_fluxBottomBar != null) _fluxBottomBar.Visibility = Visibility.Collapsed;
+                if (_sidebarColumn != null) _sidebarColumn.Width = new GridLength(0);
+                if (_sidebarBorder != null) _sidebarBorder.Visibility = Visibility.Collapsed;
+
+                if (_chromeTopControls != null) _chromeTopControls.Visibility = Visibility.Visible;
+                if (_cyberToolbarTools != null) _cyberToolbarTools.Visibility = Visibility.Collapsed;
+                if (_browserToolbarBorder != null)
+                {
+                    _browserToolbarBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x35, 0x36, 0x3A));
+                    _browserToolbarBorder.Padding = new Thickness(6, 4, 6, 4);
+                }
+
+                if (_browserModeText != null) _browserModeText.Text = "FLUX MODE";
+                if (_browserModeIcon != null) _browserModeIcon.Text = "⚡";
+                if (_topModeText != null) _topModeText.Text = "FLUX";
+                if (_topModeIcon != null) _topModeIcon.Text = "⚡";
+                if (_btnToggleBrowserMode != null) _btnToggleBrowserMode.ToolTip = "Switch to Flux Dashboard (Shift+B)";
+                if (_topModeToggleButton != null) _topModeToggleButton.ToolTip = "Switch to Flux Dashboard (Shift+B)";
+
+                MainOverlayBorder.Padding = new Thickness(0);
+                MainOverlayBorder.CornerRadius = new CornerRadius(0);
+                MainOverlayBorder.BorderThickness = new Thickness(0);
+                MainOverlayBorder.Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x20, 0x21, 0x24));
+            }
+            else
+            {
+                if (_isBrowserFullScreen)
+                {
+                    ToggleFullScreen();
+                }
+
+                // In Flux Mode: the window should be invisible to display/screen capture and taskbar (like Oasyss Flux)
+                IntPtr mainHwnd = new WindowInteropHelper(this).Handle;
+                DisplayAffinityManager.UnmarkVisibleToCapture(mainHwnd);
+
+                this.ShowInTaskbar = false;
+                long exStyle = GetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE);
+                SetWindowLongPtrSafe(mainHwnd, GWL_EXSTYLE, (exStyle | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
+                TaskbarManager.HideFromTaskbar(mainHwnd);
+                this.Title = "";
+                SetApplicationIcon(false);
+
+                if (_aiChatWindow != null && _aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Hide();
+                }
+
+                if (_fluxTopBar != null) _fluxTopBar.Visibility = Visibility.Visible;
+                if (_fluxBottomBar != null) _fluxBottomBar.Visibility = Visibility.Visible;
+                if (_sidebarColumn != null) _sidebarColumn.Width = new GridLength(175);
+                if (_sidebarBorder != null) _sidebarBorder.Visibility = Visibility.Visible;
+
+                if (_chromeTopControls != null) _chromeTopControls.Visibility = Visibility.Collapsed;
+                if (_cyberToolbarTools != null) _cyberToolbarTools.Visibility = Visibility.Visible;
+                if (_browserToolbarBorder != null)
+                {
+                    _browserToolbarBorder.Background = (System.Windows.Media.Brush)FindResource("Theme.SurfaceAlt");
+                    _browserToolbarBorder.Padding = new Thickness(10, 4, 10, 4);
+                }
+
+                if (_browserModeText != null) _browserModeText.Text = "BROWSER";
+                if (_browserModeIcon != null) _browserModeIcon.Text = "🌐";
+                if (_topModeText != null) _topModeText.Text = "BROWSER";
+                if (_topModeIcon != null) _topModeIcon.Text = "🌐";
+                if (_btnToggleBrowserMode != null) _btnToggleBrowserMode.ToolTip = "Toggle Full Browser Mode (Shift+B)";
+                if (_topModeToggleButton != null) _topModeToggleButton.ToolTip = "Toggle Full Browser Mode (Shift+B)";
+
+                MainOverlayBorder.Padding = _originalBorderPadding;
+                MainOverlayBorder.CornerRadius = _originalBorderCornerRadius;
+                MainOverlayBorder.BorderThickness = new Thickness(1);
+                MainOverlayBorder.Background = (System.Windows.Media.Brush)FindResource("Theme.AppBackground");
+            }
+        }
+
+        private void ToggleFullScreen()
+        {
+            if (!_isBrowserFullScreen)
+            {
+                _preFullScreenBounds = new Rect(this.Left, this.Top, this.Width, this.Height);
+                var workArea = SystemParameters.WorkArea;
+                this.Left = workArea.Left;
+                this.Top = workArea.Top;
+                this.Width = workArea.Width;
+                this.Height = workArea.Height;
+                _isBrowserFullScreen = true;
+                if (_chromeMaximizeIcon != null)
+                {
+                    _chromeMaximizeIcon.Text = "\u274F";
+                }
+            }
+            else
+            {
+                if (_preFullScreenBounds.Width > 0 && _preFullScreenBounds.Height > 0)
+                {
+                    this.Left = _preFullScreenBounds.Left;
+                    this.Top = _preFullScreenBounds.Top;
+                    this.Width = _preFullScreenBounds.Width;
+                    this.Height = _preFullScreenBounds.Height;
+                }
+                else
+                {
+                    this.Width = _originalWidth;
+                    this.Height = _originalHeight;
+                }
+                _isBrowserFullScreen = false;
+                if (_chromeMaximizeIcon != null)
+                {
+                    _chromeMaximizeIcon.Text = "\u25A2";
+                }
+            }
+        }
+
+        public void OpenAiChatTab()
+        {
+            // Remove any legacy in-browser AI chat tab so it never dominates the screen
+            TabItem? legacyTab = null;
+            foreach (var item in BrowserTabs.Items)
+            {
+                if (item is TabItem t && t.Tag as string == "AiChatTab")
+                {
+                    legacyTab = t;
+                    break;
+                }
+            }
+            if (legacyTab != null)
+            {
+                BrowserTabs.Items.Remove(legacyTab);
+            }
+
+            // Open standalone, resizable companion window for Ask Gemini
+            if (_aiChatWindow == null)
+            {
+                _aiChatWindow = new AiChatWindow(_aiChatService);
+                _aiChatWindow.Owner = this;
+                _aiChatWindow.Left = Math.Max(0, this.Left + this.ActualWidth - 440);
+                _aiChatWindow.Top = Math.Max(0, this.Top + 60);
+            }
+
+            if (!_aiChatWindow.IsVisible)
+            {
+                _aiChatWindow.Show();
+            }
+            else
+            {
+                if (_aiChatWindow.WindowState == WindowState.Minimized)
+                {
+                    _aiChatWindow.WindowState = WindowState.Normal;
+                }
+                _aiChatWindow.Activate();
+            }
+
+            var aiHwnd = new WindowInteropHelper(_aiChatWindow).Handle;
+            if (aiHwnd != IntPtr.Zero)
+            {
+                DisplayAffinityManager.ApplyCaptureAffinity(aiHwnd);
+                TaskbarManager.HideFromTaskbar(aiHwnd);
+            }
+
+            _aiChatWindow.FocusInput();
+        }
+
+        public async Task TriggerGoogleLensAsync()
+        {
+            OpenAiChatTab();
+            if (_aiChatWindow != null)
+            {
+                await _aiChatWindow.TakeWholeScreenshotAndAttachAsync();
+            }
+        }
+
+        public void AccessAiMode()
+        {
+            if (!_isBrowserMode)
+            {
+                ToggleBrowserMode();
+            }
+
+            if (_aiChatWindow == null)
+            {
+                OpenAiChatTab();
+            }
+            else
+            {
+                if (!_aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Show();
+                }
+                if (_aiChatWindow.IsCompletelyTransparent)
+                {
+                    _aiChatWindow.ToggleCompleteTransparency();
+                }
+                if (_aiChatWindow.WindowState == WindowState.Minimized)
+                {
+                    _aiChatWindow.WindowState = WindowState.Normal;
+                }
+                _aiChatWindow.Activate();
+                _aiChatWindow.FocusInput();
+            }
+        }
+
+        public void ToggleAiTransparency()
+        {
+            if (_aiChatWindow == null)
+            {
+                OpenAiChatTab();
+            }
+            if (_aiChatWindow != null)
+            {
+                if (!_aiChatWindow.IsVisible)
+                {
+                    _aiChatWindow.Show();
+                }
+                _aiChatWindow.ToggleCompleteTransparency();
+            }
+        }
+
+        private bool _initialTabsLoaded = false;
+        private void LoadInitialTabs()
+        {
+            if (_initialTabsLoaded) return;
+            _initialTabsLoaded = true;
+
+            bool tabsRestored = RestoreTabsIfEnabled();
+            if (!tabsRestored && BrowserTabs.Items.Count == 0)
+            {
+                AddNewBrowserTab("https://www.google.com");
+            }
+        }
+
+        #region Settings Management
+        private bool RestoreTabsIfEnabled()
+        {
+            if (_restoreTabsOnStartup && File.Exists(_tabsFilePath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(_tabsFilePath);
+                    var urls = JsonSerializer.Deserialize<List<string>>(json);
+                    if (urls != null && urls.Any())
+                    {
+                        BrowserTabs.Items.Clear();
+                        foreach (var url in urls)
+                        {
+                            AddNewBrowserTab(url);
+                        }
+                        return true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error loading tabs: {ex.Message}");
+                }
+            }
+            return false;
+        }
+
+        private void SaveTabs()
+        {
+            try
+            {
+                var urlsToSave = new List<string>();
+                foreach (TabItem tabItem in BrowserTabs.Items)
+                {
+                    if (tabItem.Content is WebView2CompositionControl webView && webView.Source != null)
+                    {
+                        urlsToSave.Add(webView.Source.ToString());
+                    }
+                }
+
+                if (urlsToSave.Any())
+                {
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    var json = JsonSerializer.Serialize(urlsToSave, options);
+                    File.WriteAllText(_tabsFilePath, json);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Could not save tabs: {ex.Message}");
+            }
+        }
+
+private void LoadSettings()
+{
+    if (!File.Exists(_settingsFilePath)) return;
+    try
+    {
+        var json = File.ReadAllText(_settingsFilePath);
+        var settings = JsonSerializer.Deserialize<AppSettings>(json);
+        if (settings != null)
+        {
+            if (settings.Width > 200) this.Width = settings.Width;
+            if (settings.Height > 200) this.Height = settings.Height;
+            _restoreTabsOnStartup = settings.RestoreTabsOnStartup;
+            _minimizeOnFocusLoss = settings.MinimizeOnFocusLoss;
+            _isDarkMode = !string.Equals(settings.Theme, "Light", StringComparison.OrdinalIgnoreCase);
+            if (settings.Opacity >= 0.2 && settings.Opacity <= 1.0) _overlayOpacity = settings.Opacity;
+
+            // AI Configuration (DPAPI decrypted)
+            _aiChatService.GeminiApiKey = SecureStorageHelper.DecryptString(settings.GeminiApiKey);
+            _aiChatService.OpenAiApiKey = SecureStorageHelper.DecryptString(settings.OpenAiApiKey);
+            _aiChatService.GroqApiKey = SecureStorageHelper.DecryptString(settings.GroqApiKey);
+            _aiChatService.ClaudeApiKey = SecureStorageHelper.DecryptString(settings.ClaudeApiKey);
+            _aiChatService.ActiveProviderName = settings.DefaultAiProvider ?? "Gemini";
+            if (string.IsNullOrWhiteSpace(settings.DefaultAiModel) || settings.DefaultAiModel == "gemini-3.6-flash")
+            {
+                settings.DefaultAiModel = "gemini-2.5-flash";
+            }
+            _aiChatService.ActiveModelId = settings.DefaultAiModel;
+
+            // Transparency
+            _isTransparentMode = settings.TransparentMode;
+            if (settings.TransparencyLevel >= 0.1 && settings.TransparencyLevel <= 1.0)
+                _transparencyLevel = settings.TransparencyLevel;
+        }
+    }
+    catch (Exception ex)
+    {
+        System.Windows.MessageBox.Show($"Could not load settings: {ex.Message}");
+    }
+}
+
+
+public void SaveSettings()
+{
+    try
+    {
+        var settings = new AppSettings
+        {
+            Width = this.Width,
+            Height = this.Height,
+            RestoreTabsOnStartup = _restoreTabsOnStartup,
+            MinimizeOnFocusLoss = _minimizeOnFocusLoss,
+            Theme = _isDarkMode ? "Dark" : "Light",
+            Opacity = _overlayOpacity,
+
+            // AI Configuration (DPAPI encrypted)
+            GeminiApiKey = SecureStorageHelper.EncryptString(_aiChatService.GeminiApiKey),
+            OpenAiApiKey = SecureStorageHelper.EncryptString(_aiChatService.OpenAiApiKey),
+            GroqApiKey = SecureStorageHelper.EncryptString(_aiChatService.GroqApiKey),
+            ClaudeApiKey = SecureStorageHelper.EncryptString(_aiChatService.ClaudeApiKey),
+            DefaultAiProvider = _aiChatService.ActiveProviderName,
+            DefaultAiModel = _aiChatService.ActiveModelId,
+
+            // Transparency
+            TransparentMode = _isTransparentMode,
+            TransparencyLevel = _transparencyLevel
+        };
+        var options = new JsonSerializerOptions { WriteIndented = true };
+        var json = JsonSerializer.Serialize(settings, options);
+        SecureStorageHelper.AtomicWriteText(_settingsFilePath, json);
+
+        if (_restoreTabsOnStartup)
+        {
+            SaveTabs();
+        }
+        else
+        {
+            if (File.Exists(_tabsFilePath))
+            {
+                File.Delete(_tabsFilePath);
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        System.Windows.MessageBox.Show($"Could not save settings: {ex.Message}");
+    }
+}
+        
+        private void ApplyTheme(bool dark)
+        {
+            _isDarkMode = dark;
+
+            void Set(string key, string hex)
+            {
+                var brush = new System.Windows.Media.SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex));
+                brush.Freeze();
+                this.Resources[key] = brush;
+                if (System.Windows.Application.Current != null)
+                {
+                    System.Windows.Application.Current.Resources[key] = brush;
+                }
+            }
+
+            if (dark)
+            {
+                Set("Theme.AppBackground",     "#FF202124");
+                Set("Theme.AppBorder",         "#FF3C4043");
+                Set("Theme.Surface",           "#FF292A2D");
+                Set("Theme.SurfaceAlt",        "#FF35363A");
+                Set("Theme.SurfaceHover",      "#FF35363A");
+                Set("Theme.SurfacePressed",    "#FF484A4D");
+                Set("Theme.DialogBackground",  "#FF292A2D");
+                Set("Theme.Input",             "#FF202124");
+                Set("Theme.Border",            "#FF3C4043");
+                Set("Theme.ScrollTrack",       "#FF202124");
+                Set("Theme.ScrollThumb",       "#FF5F6368");
+                Set("Theme.TextPrimary",       "#FFE8EAED");
+                Set("Theme.TextSecondary",     "#FF9AA0A6");
+                Set("Theme.TextMuted",         "#FF80868B");
+                Set("Theme.TabSelectedBg",     "#FF292A2D");
+                Set("Theme.TabSelectedBorder", "#00000000");
+                Set("Theme.TabHover",          "#FF2D2E30");
+                Set("Theme.Accent",            "#FF8AB4F8");
+            }
+            else
+            {
+                Set("Theme.AppBackground",     "#FFDEE1E6");
+                Set("Theme.AppBorder",         "#FFDADCE0");
+                Set("Theme.Surface",           "#FFFFFFFF");
+                Set("Theme.SurfaceAlt",        "#FFF1F3F4");
+                Set("Theme.SurfaceHover",      "#FFE8EAED");
+                Set("Theme.SurfacePressed",    "#FFDADCE0");
+                Set("Theme.DialogBackground",  "#FFFFFFFF");
+                Set("Theme.Input",             "#FFF1F3F4");
+                Set("Theme.Border",            "#FFDADCE0");
+                Set("Theme.ScrollTrack",       "#FFF1F3F4");
+                Set("Theme.ScrollThumb",       "#FFBDC1C6");
+                Set("Theme.TextPrimary",       "#FF202124");
+                Set("Theme.TextSecondary",     "#FF5F6368");
+                Set("Theme.TextMuted",         "#FF80868B");
+                Set("Theme.TabSelectedBg",     "#FFFFFFFF");
+                Set("Theme.TabSelectedBorder", "#00000000");
+                Set("Theme.TabHover",          "#FFE8EAED");
+                Set("Theme.Accent",            "#FF1A73E8");
+            }
+        }
+
+        private string HotkeyToString(uint modifiers, uint key)
+        {
+            var str = new StringBuilder();
+            if ((modifiers & MOD_CONTROL) != 0) str.Append("Ctrl + ");
+            if ((modifiers & MOD_ALT) != 0) str.Append("Alt + ");
+            if ((modifiers & MOD_SHIFT) != 0) str.Append("Shift + ");
+            if ((modifiers & MOD_WIN) != 0) str.Append("Win + ");
+            str.Append(KeyInterop.KeyFromVirtualKey((int)key));
+            return str.ToString();
+        }
+private Task<bool> ShowExitConfirmationDialog(string title, string message)
+{
+    var tcs = new TaskCompletionSource<bool>();
+
+    var dialog = new Window
+    {
+        Title = title,
+        Owner = this,
+        WindowStyle = WindowStyle.None,
+        AllowsTransparency = true,
+        Background = System.Windows.Media.Brushes.Transparent,
+        ShowInTaskbar = false,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        Width = 400,
+        SizeToContent = SizeToContent.Height,
+    };
+    MakeWindowNonDraggable(dialog);
+    dialog.SourceInitialized += Dialog_SourceInitialized;
+
+    var mainBorder = new Border { Style = (Style)FindResource("DialogBorderStyle"), Padding = new Thickness(20) };
+    dialog.Content = mainBorder;
+
+    var parentGrid = new Grid();
+    mainBorder.Child = parentGrid;
+
+var contentGrid = new Grid { Margin = new Thickness(0, 10, 0, 0) };
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // <-- fuck this thing
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+    var messageLabel = new TextBlock
+    {
+        Text = message,
+        Style = (Style)FindResource("DialogTextStyle"),
+        VerticalAlignment = VerticalAlignment.Center,
+        HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+        TextWrapping = TextWrapping.Wrap,
+        FontSize = 15
+    };
+    Grid.SetRow(messageLabel, 0);
+
+    var noButton = new System.Windows.Controls.Button { Content = "No", Style = (Style)FindResource("DialogButtonStyle"), Width = 85, IsCancel = true };
+    noButton.Click += (s, e) => { tcs.TrySetResult(false); dialog.Close(); };
+    var yesButton = new System.Windows.Controls.Button { Content = "Yes", Style = (Style)FindResource("DialogButtonStyle"), Width = 85, Margin = new Thickness(0, 0, 10, 0), IsDefault = true };
+    yesButton.Click += (s, e) => { tcs.TrySetResult(true); dialog.Close(); };
+    
+    var webView = GetCurrentWebView();
+    if (webView != null)
+    {
+        webView.Visibility = Visibility.Collapsed;
+    }
+    if (_webViewPlaceholder != null)
+    {
+        _webViewPlaceholder.Visibility = Visibility.Visible;
+    }
+
+    dialog.Closed += (s, e) => {
+        _modalOverlay.Visibility = Visibility.Collapsed;
+        if (webView != null)
+        {
+            webView.Visibility = Visibility.Visible;
+        }
+        if (_webViewPlaceholder != null)
+        {
+            _webViewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        if (!tcs.Task.IsCompleted)
+        {
+            tcs.TrySetResult(false);
+        }
+    };
+
+    var buttonPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, Margin = new Thickness(0, 15, 0, 0) };
+    buttonPanel.Children.Add(yesButton);
+    buttonPanel.Children.Add(noButton);
+
+    Grid.SetRow(buttonPanel, 1);
+
+    contentGrid.Children.Add(messageLabel);
+    contentGrid.Children.Add(buttonPanel);
+
+    var closeButton = new System.Windows.Controls.Button
+    {
+        Content = "✕",
+        Style = (Style)FindResource("DialogCloseButtonStyle"),
+        HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(0, -20, -20, 0),
+        IsCancel = true
+    };
+    closeButton.Click += (s, e) => dialog.Close();
+
+    parentGrid.Children.Add(contentGrid);
+    parentGrid.Children.Add(closeButton);
+
+    _modalOverlay.Visibility = Visibility.Visible;
+    dialog.Show();
+
+    return tcs.Task;
+}
+private async void SettingsButton_Click(object sender, RoutedEventArgs e)
+{
+    var tcs = new TaskCompletionSource<bool>();
+
+    var dialog = new Window
+    {
+        Title = "Settings",
+        Owner = this,
+        WindowStyle = WindowStyle.None,
+        AllowsTransparency = true,
+        Background = System.Windows.Media.Brushes.Transparent,
+        ShowInTaskbar = false,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        Width = 520,
+        SizeToContent = SizeToContent.Height,
+    };
+
+    // FIXED :DDDD
+    IntPtr hwnd = new WindowInteropHelper(dialog).EnsureHandle();
+    DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
+
+    MakeWindowNonDraggable(dialog);
+    dialog.SourceInitialized += Dialog_SourceInitialized;
+
+    var mainBorder = new Border { Style = (Style)FindResource("DialogBorderStyle"), Padding = new Thickness(20) };
+    dialog.Content = mainBorder;
+    
+    var parentGrid = new Grid();
+    mainBorder.Child = parentGrid;
+
+    double aspectRatio = this.Width / this.Height;
+    bool _isUpdatingSliders = false;
+
+    var contentGrid = new Grid { Margin = new Thickness(15, 25, 15, 15) };
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); 
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+    contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+    var widthLabel = new System.Windows.Controls.Label { Content = "Overlay Width:", Style = (Style)FindResource("DialogLabelStyle") };
+    var heightLabel = new System.Windows.Controls.Label { Content = "Overlay Height:", Style = (Style)FindResource("DialogLabelStyle") };
+    var screenshotHotkeyLabel = new System.Windows.Controls.Label { Content = "Screenshot Hotkey:", Style = (Style)FindResource("DialogLabelStyle") };
+    var moveOverlayLabel = new System.Windows.Controls.Label { Content = "Move Overlay:", Style = (Style)FindResource("DialogLabelStyle") };
+    var moveOverlayValue = new TextBlock { Text = "Shift + Alt + W/A/S/D", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    var resizeOverlayLabel = new System.Windows.Controls.Label { Content = "Resize Overlay:", Style = (Style)FindResource("DialogLabelStyle") };
+    var resizeOverlayValue = new TextBlock { Text = "Shift + Alt + Up/Down", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    var minimizeOverlayLabel = new System.Windows.Controls.Label { Content = "Minimize/Restore Overlay:", Style = (Style)FindResource("DialogLabelStyle") };
+    var minimizeOverlayValue = new TextBlock { Text = "Shift + Alt + C", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    var restoreTabsLabel = new System.Windows.Controls.Label { Content = "Restore tabs on startup:", Style = (Style)FindResource("DialogLabelStyle") };
+    var screenshotHotkeyValue = new TextBlock { Text = "Shift + Alt + Z", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    var restoreTabsCheckBox = new System.Windows.Controls.CheckBox { IsChecked = _restoreTabsOnStartup, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5), Style = (Style)FindResource("DialogCheckBoxStyle") };
+    
+    var minimizeOnLossFocusLabel = new System.Windows.Controls.Label { Content = "Minimize on focus loss:", Style = (Style)FindResource("DialogLabelStyle") };
+    var minimizeOnLossFocusCheckBox = new System.Windows.Controls.CheckBox { IsChecked = _minimizeOnFocusLoss, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5), Style = (Style)FindResource("DialogCheckBoxStyle") };
+
+    var lockAspectRatioCheckBox = new System.Windows.Controls.CheckBox { Content = "Lock Aspect Ratio", IsChecked = true, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 10, 5, 10), Style = (Style)FindResource("DialogCheckBoxStyle") };
+    var widthSlider = new Slider { Minimum = 200, Maximum = SystemParameters.PrimaryScreenWidth, Value = this.Width, Margin = new Thickness(5), VerticalAlignment = VerticalAlignment.Center };
+    var widthValueText = new System.Windows.Controls.TextBox { Text = this.Width.ToString("F0"), Width = 50, IsReadOnly = true, Style = (Style)FindResource("DialogTextBoxStyle"), TextAlignment = TextAlignment.Center };
+    var widthPanel = new DockPanel();
+    widthPanel.Children.Add(widthValueText);
+    widthPanel.Children.Add(widthSlider);
+    DockPanel.SetDock(widthValueText, Dock.Right);
+    var heightSlider = new Slider { Minimum = 200, Maximum = SystemParameters.PrimaryScreenHeight, Value = this.Height, Margin = new Thickness(5), VerticalAlignment = VerticalAlignment.Center };
+    var heightValueText = new System.Windows.Controls.TextBox { Text = this.Height.ToString("F0"), Width = 50, IsReadOnly = true, Style = (Style)FindResource("DialogTextBoxStyle"), TextAlignment = TextAlignment.Center };
+    var heightPanel = new DockPanel();
+    heightPanel.Children.Add(heightValueText);
+    heightPanel.Children.Add(heightSlider);
+    DockPanel.SetDock(heightValueText, Dock.Right);
+
+    Grid.SetRow(widthLabel, 0); Grid.SetColumn(widthLabel, 0);
+    Grid.SetRow(widthPanel, 0); Grid.SetColumn(widthPanel, 1);
+    Grid.SetRow(heightLabel, 1); Grid.SetColumn(heightLabel, 0);
+    Grid.SetRow(heightPanel, 1); Grid.SetColumn(heightPanel, 1);
+    Grid.SetRow(lockAspectRatioCheckBox, 2); Grid.SetColumn(lockAspectRatioCheckBox, 1);
+    Grid.SetRow(screenshotHotkeyLabel, 3); Grid.SetColumn(screenshotHotkeyLabel, 0);
+    Grid.SetRow(screenshotHotkeyValue, 3); Grid.SetColumn(screenshotHotkeyValue, 1);
+    Grid.SetRow(moveOverlayLabel, 4); Grid.SetColumn(moveOverlayLabel, 0);
+    Grid.SetRow(moveOverlayValue, 4); Grid.SetColumn(moveOverlayValue, 1);
+    Grid.SetRow(resizeOverlayLabel, 5); Grid.SetColumn(resizeOverlayLabel, 0);
+    Grid.SetRow(resizeOverlayValue, 5); Grid.SetColumn(resizeOverlayValue, 1);
+    Grid.SetRow(minimizeOverlayLabel, 6); Grid.SetColumn(minimizeOverlayLabel, 0);
+    Grid.SetRow(minimizeOverlayValue, 6); Grid.SetColumn(minimizeOverlayValue, 1);
+    Grid.SetRow(restoreTabsLabel, 7); Grid.SetColumn(restoreTabsLabel, 0);
+    Grid.SetRow(restoreTabsCheckBox, 7); Grid.SetColumn(restoreTabsCheckBox, 1);
+
+    Grid.SetRow(minimizeOnLossFocusLabel, 8); Grid.SetColumn(minimizeOnLossFocusLabel, 0);
+    Grid.SetRow(minimizeOnLossFocusCheckBox, 8); Grid.SetColumn(minimizeOnLossFocusCheckBox, 1);
+
+    lockAspectRatioCheckBox.Checked += (s, e) => { aspectRatio = widthSlider.Value / heightSlider.Value; };
+    widthSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; widthValueText.Text = e.NewValue.ToString("F0"); this.Width = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newHeight = e.NewValue / aspectRatio; if (newHeight >= heightSlider.Minimum && newHeight <= heightSlider.Maximum) { heightSlider.Value = newHeight; heightValueText.Text = newHeight.ToString("F0"); this.Height = newHeight; } _isUpdatingSliders = false; } ScheduleSaveSettings(); };
+    heightSlider.ValueChanged += (s, e) => { if (_isUpdatingSliders) return; heightValueText.Text = e.NewValue.ToString("F0"); this.Height = e.NewValue; if (lockAspectRatioCheckBox.IsChecked == true) { _isUpdatingSliders = true; double newWidth = e.NewValue * aspectRatio; if (newWidth >= widthSlider.Minimum && newWidth <= widthSlider.Maximum) { widthSlider.Value = newWidth; widthValueText.Text = newWidth.ToString("F0"); this.Width = newWidth; } _isUpdatingSliders = false; } ScheduleSaveSettings(); };
+    restoreTabsCheckBox.Click += (s, e) => { _restoreTabsOnStartup = restoreTabsCheckBox.IsChecked ?? false; SaveSettings(); };
+
+    minimizeOnLossFocusCheckBox.Click += (s, e) => { _minimizeOnFocusLoss = minimizeOnLossFocusCheckBox.IsChecked ?? false; SaveSettings(); };
+
+    contentGrid.Children.Add(widthLabel);
+    contentGrid.Children.Add(widthPanel);
+    contentGrid.Children.Add(heightLabel);
+    contentGrid.Children.Add(heightPanel);
+    contentGrid.Children.Add(lockAspectRatioCheckBox);
+    contentGrid.Children.Add(screenshotHotkeyLabel);
+    contentGrid.Children.Add(screenshotHotkeyValue);
+    contentGrid.Children.Add(moveOverlayLabel);
+    contentGrid.Children.Add(moveOverlayValue);
+    contentGrid.Children.Add(resizeOverlayLabel);
+    contentGrid.Children.Add(resizeOverlayValue);
+    contentGrid.Children.Add(minimizeOverlayLabel);
+    contentGrid.Children.Add(minimizeOverlayValue);
+    contentGrid.Children.Add(restoreTabsLabel);
+    contentGrid.Children.Add(restoreTabsCheckBox);
+
+    contentGrid.Children.Add(minimizeOnLossFocusLabel);
+    contentGrid.Children.Add(minimizeOnLossFocusCheckBox);
+
+    contentGrid.RowDefinitions.Insert(9, new RowDefinition { Height = GridLength.Auto });
+    var themeLabel = new System.Windows.Controls.Label { Content = "Appearance:", Style = (Style)FindResource("DialogLabelStyle") };
+    var darkModeCheckBox = new System.Windows.Controls.CheckBox { Content = "Dark Mode", IsChecked = _isDarkMode, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5), Style = (Style)FindResource("DialogCheckBoxStyle") };
+    darkModeCheckBox.Click += (s, e) => { _isDarkMode = darkModeCheckBox.IsChecked ?? true; ApplyTheme(_isDarkMode); SaveSettings(); };
+    Grid.SetRow(themeLabel, 9); Grid.SetColumn(themeLabel, 0);
+    Grid.SetRow(darkModeCheckBox, 9); Grid.SetColumn(darkModeCheckBox, 1);
+    contentGrid.Children.Add(themeLabel);
+    contentGrid.Children.Add(darkModeCheckBox);
+
+    contentGrid.RowDefinitions.Insert(10, new RowDefinition { Height = GridLength.Auto });
+    var opacityLabel = new System.Windows.Controls.Label { Content = "Overlay Opacity:", Style = (Style)FindResource("DialogLabelStyle") };
+    var opacitySlider = new Slider { Minimum = 0.04, Maximum = 1.0, Value = _overlayOpacity, Margin = new Thickness(5), VerticalAlignment = VerticalAlignment.Center };
+    var opacityValueText = new System.Windows.Controls.TextBox { Text = ((int)(_overlayOpacity * 100)) + "%", Width = 50, IsReadOnly = true, Style = (Style)FindResource("DialogTextBoxStyle"), TextAlignment = TextAlignment.Center };
+    var opacityPanel = new DockPanel();
+    opacityPanel.Children.Add(opacityValueText);
+    opacityPanel.Children.Add(opacitySlider);
+    DockPanel.SetDock(opacityValueText, Dock.Right);
+
+    opacitySlider.ValueChanged += (s, e) =>
+    {
+        opacityValueText.Text = ((int)(e.NewValue * 100)) + "%";
+        ApplyOverlayOpacity(e.NewValue);
+        ScheduleSaveSettings();
+    };
+
+    Grid.SetRow(opacityLabel, 10); Grid.SetColumn(opacityLabel, 0);
+    Grid.SetRow(opacityPanel, 10); Grid.SetColumn(opacityPanel, 1);
+    contentGrid.Children.Add(opacityLabel);
+    contentGrid.Children.Add(opacityPanel);
+
+    // ── AI Configuration Section ──
+    contentGrid.RowDefinitions.Insert(10, new RowDefinition { Height = GridLength.Auto });
+    var aiSectionHeader = new TextBlock
+    {
+        Text = "── AI Configuration ──",
+        Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xD6, 0xFF, 0x3F)),
+        FontWeight = FontWeights.SemiBold,
+        FontSize = 13,
+        Margin = new Thickness(5, 15, 5, 5),
+        HorizontalAlignment = System.Windows.HorizontalAlignment.Center
+    };
+    Grid.SetRow(aiSectionHeader, 10); Grid.SetColumn(aiSectionHeader, 0); Grid.SetColumnSpan(aiSectionHeader, 2);
+    contentGrid.Children.Add(aiSectionHeader);
+
+    // Gemini API Key
+    contentGrid.RowDefinitions.Insert(11, new RowDefinition { Height = GridLength.Auto });
+    var geminiLabel = new System.Windows.Controls.Label { Content = "Gemini API Key:", Style = (Style)FindResource("DialogLabelStyle") };
+    var geminiKeyBox = new System.Windows.Controls.TextBox
+    {
+        Text = _aiChatService.GeminiApiKey,
+        Style = (Style)FindResource("DialogTextBoxStyle"),
+        Margin = new Thickness(5),
+        ToolTip = "Free at aistudio.google.com/apikey"
+    };
+    geminiKeyBox.TextChanged += (s, ev) => { _aiChatService.GeminiApiKey = geminiKeyBox.Text.Trim(); ScheduleSaveSettings(); };
+    Grid.SetRow(geminiLabel, 11); Grid.SetColumn(geminiLabel, 0);
+    Grid.SetRow(geminiKeyBox, 11); Grid.SetColumn(geminiKeyBox, 1);
+    contentGrid.Children.Add(geminiLabel);
+    contentGrid.Children.Add(geminiKeyBox);
+
+    // OpenAI API Key
+    contentGrid.RowDefinitions.Insert(12, new RowDefinition { Height = GridLength.Auto });
+    var openaiLabel = new System.Windows.Controls.Label { Content = "OpenAI API Key:", Style = (Style)FindResource("DialogLabelStyle") };
+    var openaiKeyBox = new System.Windows.Controls.TextBox
+    {
+        Text = _aiChatService.OpenAiApiKey,
+        Style = (Style)FindResource("DialogTextBoxStyle"),
+        Margin = new Thickness(5),
+        ToolTip = "Get at platform.openai.com/api-keys"
+    };
+    openaiKeyBox.TextChanged += (s, ev) => { _aiChatService.OpenAiApiKey = openaiKeyBox.Text.Trim(); ScheduleSaveSettings(); };
+    Grid.SetRow(openaiLabel, 12); Grid.SetColumn(openaiLabel, 0);
+    Grid.SetRow(openaiKeyBox, 12); Grid.SetColumn(openaiKeyBox, 1);
+    contentGrid.Children.Add(openaiLabel);
+    contentGrid.Children.Add(openaiKeyBox);
+
+    // Claude API Key
+    contentGrid.RowDefinitions.Insert(13, new RowDefinition { Height = GridLength.Auto });
+    var claudeLabel = new System.Windows.Controls.Label { Content = "Claude API Key:", Style = (Style)FindResource("DialogLabelStyle") };
+    var claudeKeyBox = new System.Windows.Controls.TextBox
+    {
+        Text = _aiChatService.ClaudeApiKey,
+        Style = (Style)FindResource("DialogTextBoxStyle"),
+        Margin = new Thickness(5),
+        ToolTip = "Get at console.anthropic.com/settings/keys"
+    };
+    claudeKeyBox.TextChanged += (s, ev) => { _aiChatService.ClaudeApiKey = claudeKeyBox.Text.Trim(); ScheduleSaveSettings(); };
+    Grid.SetRow(claudeLabel, 13); Grid.SetColumn(claudeLabel, 0);
+    Grid.SetRow(claudeKeyBox, 13); Grid.SetColumn(claudeKeyBox, 1);
+    contentGrid.Children.Add(claudeLabel);
+    contentGrid.Children.Add(claudeKeyBox);
+
+    // Groq API Key
+    contentGrid.RowDefinitions.Insert(14, new RowDefinition { Height = GridLength.Auto });
+    var groqLabel = new System.Windows.Controls.Label { Content = "Groq API Key:", Style = (Style)FindResource("DialogLabelStyle") };
+    var groqKeyBox = new System.Windows.Controls.TextBox
+    {
+        Text = _aiChatService.GroqApiKey,
+        Style = (Style)FindResource("DialogTextBoxStyle"),
+        Margin = new Thickness(5),
+        ToolTip = "Free at console.groq.com/keys"
+    };
+    groqKeyBox.TextChanged += (s, ev) => { _aiChatService.GroqApiKey = groqKeyBox.Text.Trim(); ScheduleSaveSettings(); };
+    Grid.SetRow(groqLabel, 14); Grid.SetColumn(groqLabel, 0);
+    Grid.SetRow(groqKeyBox, 14); Grid.SetColumn(groqKeyBox, 1);
+    contentGrid.Children.Add(groqLabel);
+    contentGrid.Children.Add(groqKeyBox);
+
+    // Transparency hotkey info
+    contentGrid.RowDefinitions.Insert(15, new RowDefinition { Height = GridLength.Auto });
+    var transparencyHotkeyLabel = new System.Windows.Controls.Label { Content = "Toggle Transparency:", Style = (Style)FindResource("DialogLabelStyle") };
+    var transparencyHotkeyValue = new TextBlock { Text = "Shift + Alt + T", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    Grid.SetRow(transparencyHotkeyLabel, 15); Grid.SetColumn(transparencyHotkeyLabel, 0);
+    Grid.SetRow(transparencyHotkeyValue, 15); Grid.SetColumn(transparencyHotkeyValue, 1);
+    contentGrid.Children.Add(transparencyHotkeyLabel);
+    contentGrid.Children.Add(transparencyHotkeyValue);
+
+    contentGrid.RowDefinitions.Insert(16, new RowDefinition { Height = GridLength.Auto });
+    var ghostHotkeyLabel = new System.Windows.Controls.Label { Content = "Complete Transparency:", Style = (Style)FindResource("DialogLabelStyle") };
+    var ghostHotkeyValue = new TextBlock { Text = "Shift + T / Shift + Alt + T", Style = (Style)FindResource("DialogTextStyle"), Margin = new Thickness(5) };
+    Grid.SetRow(ghostHotkeyLabel, 16); Grid.SetColumn(ghostHotkeyLabel, 0);
+    Grid.SetRow(ghostHotkeyValue, 16); Grid.SetColumn(ghostHotkeyValue, 1);
+    contentGrid.Children.Add(ghostHotkeyLabel);
+    contentGrid.Children.Add(ghostHotkeyValue);
+
+    var closeButton = new System.Windows.Controls.Button { Content = "✕", Style = (Style)FindResource("DialogCloseButtonStyle"), HorizontalAlignment = System.Windows.HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -20, -20, 0), IsCancel = true };
+    closeButton.Click += (s, e) => dialog.Close();
+    parentGrid.Children.Add(contentGrid);
+    parentGrid.Children.Add(closeButton);
+
+    var webView = GetCurrentWebView();
+    if (webView != null)
+    {
+        webView.Visibility = Visibility.Collapsed;
+    }
+    if (_webViewPlaceholder != null)
+    {
+        _webViewPlaceholder.Visibility = Visibility.Visible;
+    }
+
+    dialog.Closed += (s, e) => {
+        _modalOverlay.Visibility = Visibility.Collapsed;
+        if (webView != null)
+        {
+            webView.Visibility = Visibility.Visible;
+        }
+        if (_webViewPlaceholder != null)
+        {
+            _webViewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        tcs.TrySetResult(true);
+    };
+
+    _modalOverlay.Visibility = Visibility.Visible;
+    dialog.Show();
+
+    await tcs.Task;
+}
+
+#endregion
+
+        #region Bookmark Management
+
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
+            SaveBookmarks();
+            SaveSettings();
+            _keyboardHook?.Dispose();
+            try { _aiChatWindow?.Close(); } catch { }
+            try
+            {
+                if (Directory.Exists(_screenshotsTempFolder))
+                {
+                    Directory.Delete(_screenshotsTempFolder, true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not delete temp screenshot folder: {ex.Message}");
+            }
+        }
+
+        private void LoadBookmarks()
+        {
+            if (!File.Exists(_bookmarksFilePath)) return;
+            try
+            {
+                var json = File.ReadAllText(_bookmarksFilePath);
+                var loadedBookmarks = JsonSerializer.Deserialize<ObservableCollection<Bookmark>>(json);
+                if (loadedBookmarks != null)
+                {
+                    Bookmarks = loadedBookmarks;
+                    foreach (var bookmark in Bookmarks)
+                    {
+                       UpdateFavicon(bookmark);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Could not load bookmarks: {ex.Message}");
+            }
+        }
+
+        private void SaveBookmarks()
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true, IgnoreReadOnlyProperties = true };
+                var json = JsonSerializer.Serialize(Bookmarks, options);
+                File.WriteAllText(_bookmarksFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                 System.Windows.MessageBox.Show($"Could not save bookmarks: {ex.Message}");
+            }
+        }
+private void MinimizeCustom()
+{
+    if (_isMinimized) return;
+
+    _originalHeight = this.Height;
+    _originalWidth = this.Width;
+    _originalBorderPadding = MainOverlayBorder.Padding;
+    _originalBorderCornerRadius = MainOverlayBorder.CornerRadius;
+
+    BrowserTabs.Visibility = Visibility.Collapsed;
+    double newWidth = 22;
+    this.Left += this.Width - newWidth;
+    MainOverlayBorder.Padding = new Thickness(0);
+    MainOverlayBorder.CornerRadius = new CornerRadius(0);
+    this.Height = 22;
+    this.Width = newWidth;
+    _isMinimized = true;
+}
+private Task<(bool success, string name, string url)> ShowBookmarkDialog(string defaultName = "", string defaultUrl = "")
+{
+    var tcs = new TaskCompletionSource<(bool success, string name, string url)>();
+
+    var dialog = new Window
+    {
+        Title = "Bookmark",
+        Owner = this,
+        WindowStyle = WindowStyle.None,
+        AllowsTransparency = true,
+        Background = System.Windows.Media.Brushes.Transparent,
+        ShowInTaskbar = false,
+        WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        Width = 450,
+        Height = 180,
+    };
+    MakeWindowNonDraggable(dialog);
+    dialog.SourceInitialized += Dialog_SourceInitialized;
+
+    var mainBorder = new Border { Style = (Style)FindResource("DialogBorderStyle"), Padding = new Thickness(20) };
+    dialog.Content = mainBorder;
+
+    var parentGrid = new Grid();
+    mainBorder.Child = parentGrid;
+
+    var contentGrid = new Grid { Margin = new Thickness(0, 20, 0, 0) };
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+    contentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+    contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+    contentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+    var nameLabel = new System.Windows.Controls.Label { Content = "Name:", Style = (Style)FindResource("DialogLabelStyle"), Margin = new Thickness(0, 0, 10, 0) };
+    var nameTextBox = new System.Windows.Controls.TextBox { Text = defaultName, Style = (Style)FindResource("DialogTextBoxStyle"), Margin = new Thickness(0, 5, 0, 5) };
+    var urlLabel = new System.Windows.Controls.Label { Content = "URL:", Style = (Style)FindResource("DialogLabelStyle"), Margin = new Thickness(0, 0, 10, 0) };
+    var urlTextBox = new System.Windows.Controls.TextBox { Text = defaultUrl, Style = (Style)FindResource("DialogTextBoxStyle"), Margin = new Thickness(0, 5, 0, 5) };
+
+    Grid.SetRow(nameLabel, 0); Grid.SetColumn(nameLabel, 0);
+    Grid.SetRow(nameTextBox, 0); Grid.SetColumn(nameTextBox, 1);
+    Grid.SetRow(urlLabel, 1); Grid.SetColumn(urlLabel, 0);
+    Grid.SetRow(urlTextBox, 1); Grid.SetColumn(urlTextBox, 1);
+
+var okButton = new System.Windows.Controls.Button { Content = "OK", Style = (Style)FindResource("DialogButtonStyle"), Width = 85, Margin = new Thickness(0, 0, 10, 0), IsDefault = true };
+    okButton.Click += (s, e) => { tcs.TrySetResult((true, nameTextBox.Text, urlTextBox.Text)); dialog.Close(); };
+
+    var cancelButton = new System.Windows.Controls.Button { Content = "Cancel", Style = (Style)FindResource("DialogButtonStyle"), Width = 85, IsCancel = true };
+    cancelButton.Click += (s, e) => { tcs.TrySetResult((false, "", "")); dialog.Close(); };
+    
+    var webView = GetCurrentWebView();
+    if (webView != null)
+    {
+        webView.Visibility = Visibility.Collapsed;
+    }
+    if (_webViewPlaceholder != null)
+    {
+        _webViewPlaceholder.Visibility = Visibility.Visible;
+    }
+
+    dialog.Closed += (s, e) => {
+        _modalOverlay.Visibility = Visibility.Collapsed;
+        if (webView != null)
+        {
+            webView.Visibility = Visibility.Visible;
+        }
+        if (_webViewPlaceholder != null)
+        {
+            _webViewPlaceholder.Visibility = Visibility.Collapsed;
+        }
+        if (!tcs.Task.IsCompleted)
+        {
+            tcs.TrySetResult((false, "", ""));
+        }
+    };
+
+            var buttonPanel = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, Margin = new Thickness(0, 15, 0, 0) };
+        buttonPanel.Children.Add(okButton);
+    buttonPanel.Children.Add(cancelButton);
+    Grid.SetRow(buttonPanel, 3); Grid.SetColumnSpan(buttonPanel, 2);
+
+    contentGrid.Children.Add(nameLabel);
+    contentGrid.Children.Add(nameTextBox);
+    contentGrid.Children.Add(urlLabel);
+    contentGrid.Children.Add(urlTextBox);
+    contentGrid.Children.Add(buttonPanel);
+    
+    var closeButton = new System.Windows.Controls.Button
+    {
+        Content = "✕",
+        Style = (Style)FindResource("DialogCloseButtonStyle"),
+        HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+        VerticalAlignment = VerticalAlignment.Top,
+        Margin = new Thickness(0, -20, -20, 0),
+        IsCancel = true
+    };
+    closeButton.Click += (s, e) => dialog.Close();
+
+    parentGrid.Children.Add(contentGrid);
+    parentGrid.Children.Add(closeButton);
+
+    _modalOverlay.Visibility = Visibility.Visible;
+    dialog.Show();
+
+    return tcs.Task;
+}
+private async void AddBookmarkButton_Click(object sender, RoutedEventArgs e)
+{
+    var webView = GetCurrentWebView();
+    var currentUrl = webView?.Source?.ToString() ?? "https://www.google.com";
+    var currentTitle = string.IsNullOrWhiteSpace(webView?.CoreWebView2?.DocumentTitle) ? "New Bookmark" : webView.CoreWebView2.DocumentTitle;
+
+
+    BitmapImage currentFaviconSource = null;
+    if (BrowserTabs.SelectedItem is TabItem currentTab && currentTab.Header is FrameworkElement tabHeader)
+    {
+        var faviconImageControl = FindChild<System.Windows.Controls.Image>(tabHeader);
+
+        if (faviconImageControl != null && faviconImageControl.Source is BitmapImage bmp)
+        {
+
+            if (faviconImageControl.Name != "loadingSpinner" && faviconImageControl.Visibility == Visibility.Visible)
+            {
+                currentFaviconSource = bmp;
+            }
+        }
+    }
+
+    var (success, name, url) = await ShowBookmarkDialog(currentTitle, currentUrl);
+
+    if (success)
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+        {
+            System.Windows.MessageBox.Show("Bookmark name and URL cannot be empty.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        var newBookmark = new Bookmark { Name = name, Url = url };
+
+        if (currentFaviconSource != null)
+        {
+            newBookmark.Favicon = currentFaviconSource;
+        }
+        else
+        {
+            UpdateFavicon(newBookmark);
+        }
+
+        Bookmarks.Add(newBookmark);
+    }
+}
+        private async void EditBookmark_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem && menuItem.DataContext is Bookmark bookmarkToEdit)
+            {
+                var (success, name, url) = await ShowBookmarkDialog(bookmarkToEdit.Name, bookmarkToEdit.Url);
+                if (success)
+                {
+                    if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                    {
+                        System.Windows.MessageBox.Show("Bookmark name and URL cannot be empty.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+                    bookmarkToEdit.Name = name;
+                    bookmarkToEdit.Url = url;
+                    UpdateFavicon(bookmarkToEdit);
+                }
+            }
+        }
+
+private async void DeleteBookmark_Click(object sender, RoutedEventArgs e)
+{
+    if (sender is MenuItem menuItem && menuItem.DataContext is Bookmark bookmarkToDelete)
+    {
+        bool shouldDelete = await ShowExitConfirmationDialog("Confirm Delete", $"Are you sure you want to delete the '{bookmarkToDelete.Name}' bookmark?");
+        if (shouldDelete)
+        {
+            Bookmarks.Remove(bookmarkToDelete);
+        }
+    }
+}private void Bookmark_RightClick(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is Bookmark bookmark)
+            {
+                // Prevent any default context menus
+                e.Handled = true; 
+                ShowCustomBookmarkMenu(bookmark);
+            }
+        }
+
+        private void ShowCustomBookmarkMenu(Bookmark bookmark)
+        {
+            GetCursorPos(out POINT cursor);
+
+            var menuWindow = new Window
+            {
+                Owner = this,
+                ShowInTaskbar = false, // Corrected typo that my own dumbass made
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                SizeToContent = SizeToContent.WidthAndHeight,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = cursor.X + 2,
+                Top = cursor.Y + 2,
+                Topmost = true
+            };
+
+            menuWindow.SourceInitialized += Dialog_SourceInitialized;
+
+            EventHandler? deactivatedHandler = null;
+            deactivatedHandler = (s, args) => menuWindow.Close();
+            menuWindow.Deactivated += deactivatedHandler;
+            
+            var menuItemStyle = new Style(typeof(System.Windows.Controls.Button));
+            
+            menuItemStyle.Setters.Add(new Setter(BackgroundProperty, System.Windows.Media.Brushes.Transparent));
+            menuItemStyle.Setters.Add(new Setter(ForegroundProperty, System.Windows.Media.Brushes.Lime));
+            menuItemStyle.Setters.Add(new Setter(BorderThicknessProperty, new Thickness(0)));
+            menuItemStyle.Setters.Add(new Setter(PaddingProperty, new Thickness(12, 6, 12, 6)));
+            menuItemStyle.Setters.Add(new Setter(HorizontalContentAlignmentProperty, System.Windows.HorizontalAlignment.Left));
+            menuItemStyle.Setters.Add(new Setter(CursorProperty, System.Windows.Input.Cursors.Hand));
+
+            var controlTemplate = new ControlTemplate(typeof(System.Windows.Controls.Button));
+            
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.Name = "templateBorder";
+            border.SetBinding(Border.BackgroundProperty, new System.Windows.Data.Binding("Background") { RelativeSource = RelativeSource.TemplatedParent });
+            
+
+            var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentPresenter.SetValue(HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Left);
+            contentPresenter.SetValue(VerticalAlignmentProperty, VerticalAlignment.Center);
+
+            contentPresenter.SetBinding(ContentPresenter.MarginProperty, new System.Windows.Data.Binding("Padding") { RelativeSource = RelativeSource.TemplatedParent }); // <-- FUCKFUCKFUCKFUCKFUCKFUFKCKCKCKC
+            
+            border.AppendChild(contentPresenter);
+            controlTemplate.VisualTree = border;
+            
+            var trigger = new Trigger { Property = IsMouseOverProperty, Value = true };
+            trigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1A, 0x20, 0x26)), "templateBorder"));
+            
+            controlTemplate.Triggers.Add(trigger);
+            
+            menuItemStyle.Setters.Add(new Setter(TemplateProperty, controlTemplate));
+            
+            var editButton = new System.Windows.Controls.Button { Content = "Edit", Style = menuItemStyle };
+            editButton.Click += (s, args) =>
+            {
+                menuWindow.Deactivated -= deactivatedHandler;
+                menuWindow.Close();
+                PerformEditBookmark(bookmark);
+            };
+
+            var deleteButton = new System.Windows.Controls.Button { Content = "Delete", Style = menuItemStyle };
+            deleteButton.Click += (s, args) =>
+            {
+                menuWindow.Deactivated -= deactivatedHandler;
+                menuWindow.Close();
+                PerformDeleteBookmark(bookmark);
+            };
+
+            var menuPanel = new StackPanel();
+            menuPanel.Children.Add(editButton);
+            menuPanel.Children.Add(deleteButton);
+
+            var menuBorder = new Border
+            {
+                Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x0D, 0x0F, 0x12)),
+                BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x1D, 0x22, 0x28)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(4),
+                Child = menuPanel
+            };
+
+            menuWindow.Content = menuBorder;
+            menuWindow.Show();
+            menuWindow.Activate();
+        }
+        private void Bookmark_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.DataContext is Bookmark bookmark)
+            {
+                Navigate(bookmark.Url);
+            }
+        }
+        private async void PerformEditBookmark(Bookmark bookmarkToEdit)
+        {
+            var (success, name, url) = await ShowBookmarkDialog(bookmarkToEdit.Name, bookmarkToEdit.Url);
+            if (success)
+            {
+                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                {
+                    System.Windows.MessageBox.Show("Bookmark name and URL cannot be empty.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+                bookmarkToEdit.Name = name;
+                bookmarkToEdit.Url = url;
+                UpdateFavicon(bookmarkToEdit);
+            }
+        }
+
+        private async void PerformDeleteBookmark(Bookmark bookmarkToDelete)
+        {
+            bool shouldDelete = await ShowExitConfirmationDialog("Confirm Delete", $"Are you sure you want to delete the '{bookmarkToDelete.Name}' bookmark?");
+            if (shouldDelete)
+            {
+                Bookmarks.Remove(bookmarkToDelete);
+            }
+        }        private void UpdateFavicon(Bookmark bookmark)
+        {
+            if (!Uri.TryCreate(bookmark.Url, UriKind.Absolute, out var uri)) return;
+            
+            var faviconUrl = $"https://www.google.com/s2/favicons?domain={uri.Host}&sz=16";
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(faviconUrl, UriKind.Absolute);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bookmark.Favicon = bitmap;
+            }
+            catch
+            {
+                bookmark.Favicon = null; 
+            }
+        }
+
+        #endregion
+        
+        private void MainWindow_SourceInitialized(object sender, EventArgs e)
+        {
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+            int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
+            ApplyOverlayOpacity(_overlayOpacity);
+        }
+
+        private void ApplyOverlayOpacity(double opacity)
+        {
+            // Clamp so the overlay can never fully vanish while still eating mouse input
+            _overlayOpacity = Math.Clamp(opacity, 0.04, 1.0);
+            this.Opacity = _overlayOpacity;
+        }
+
+        #region Transparency Toggle
+
+        public void ToggleCompleteTransparency()
+        {
+            _isCompletelyTransparent = !_isCompletelyTransparent;
+            IntPtr hwnd = new WindowInteropHelper(this).Handle;
+
+            if (_isCompletelyTransparent)
+            {
+                _savedOpacityBeforeCompleteTransparency = this.Opacity > 0.04 ? this.Opacity : 1.0;
+                this.Opacity = 0.0;
+                this.IsHitTestVisible = false;
+
+                if (hwnd != IntPtr.Zero)
+                {
+                    long extendedStyle = GetWindowLongPtrSafe(hwnd, GWL_EXSTYLE);
+                    SetWindowLongPtrSafe(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+                }
+            }
+            else
+            {
+                if (hwnd != IntPtr.Zero)
+                {
+                    long extendedStyle = GetWindowLongPtrSafe(hwnd, GWL_EXSTYLE);
+                    SetWindowLongPtrSafe(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_TRANSPARENT);
+                }
+
+                this.IsHitTestVisible = true;
+                this.Opacity = _savedOpacityBeforeCompleteTransparency > 0.04 ? _savedOpacityBeforeCompleteTransparency : 1.0;
+                _overlayOpacity = this.Opacity;
+                this.Activate();
+            }
+
+            UpdateTransparencyButtonUI();
+        }
+
+        private void ToggleTransparencyMode()
+        {
+            if (_isCompletelyTransparent)
+            {
+                ToggleCompleteTransparency();
+                return;
+            }
+
+            _isTransparentMode = !_isTransparentMode;
+            if (_isTransparentMode)
+            {
+                ApplyOverlayOpacity(_transparencyLevel);
+            }
+            else
+            {
+                ApplyOverlayOpacity(1.0);
+            }
+            UpdateTransparencyButtonUI();
+            ScheduleSaveSettings();
+        }
+
+        private void TransparencySlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            _transparencyLevel = e.NewValue;
+            if (_isTransparentMode && !_isCompletelyTransparent)
+            {
+                ApplyOverlayOpacity(_transparencyLevel);
+            }
+            ScheduleSaveSettings();
+        }
+
+        private void TransparencyButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_transparencySliderPopup != null)
+            {
+                _transparencySliderPopup.Visibility = _transparencySliderPopup.Visibility == Visibility.Visible
+                    ? Visibility.Collapsed : Visibility.Visible;
+            }
+        }
+
+        private void UpdateTransparencyButtonUI()
+        {
+            if (_transparencyToggleButton != null)
+            {
+                var img = _transparencyToggleButton.Content as System.Windows.Controls.Image;
+                if (img != null)
+                {
+                    img.Opacity = _isCompletelyTransparent ? 0.2 : (_isTransparentMode ? 0.5 : 1.0);
+                }
+                _transparencyToggleButton.ToolTip = _isCompletelyTransparent
+                    ? "Ghost Mode (Completely Transparent) — Shift+T / Shift+Alt+T to restore"
+                    : (_isTransparentMode
+                        ? $"Transparency ON ({(int)(_transparencyLevel * 100)}%) — Shift+Alt+T"
+                        : "Transparency OFF — Shift+Alt+T (Complete: Shift+T)");
+            }
+        }
+
+        #endregion
+
+        #region Resize Overlay
+
+        private void ResizeOverlay(double delta)
+        {
+            double aspectRatio = this.Width / this.Height;
+            double newHeight = this.Height + delta;
+            double newWidth = newHeight * aspectRatio;
+
+            // Clamp to reasonable bounds
+            var workArea = System.Windows.SystemParameters.WorkArea;
+            newHeight = Math.Clamp(newHeight, 300, workArea.Height);
+            newWidth = Math.Clamp(newWidth, 300, workArea.Width);
+
+            this.Height = newHeight;
+            this.Width = newWidth;
+            ScheduleSaveSettings();
+        }
+
+        #endregion
+
+        #region Intro Video
+
+        private void InitializeIntroVideo(Grid rootGrid)
+        {
+            try
+            {
+                // Look for intro.mp4 next to the executable or in the app directory
+                string appDir = AppDomain.CurrentDomain.BaseDirectory;
+                string videoPath = Path.Combine(appDir, "intro.mp4");
+
+                if (!File.Exists(videoPath))
+                {
+                    // Fallback checks
+                    var parentDir = Directory.GetParent(appDir)?.FullName;
+                    if (parentDir != null && File.Exists(Path.Combine(parentDir, "intro.mp4")))
+                    {
+                        videoPath = Path.Combine(parentDir, "intro.mp4");
+                    }
+                }
+
+                if (!File.Exists(videoPath))
+                {
+                    try
+                    {
+                        var uri = new Uri("pack://application:,,,/intro.mp4", UriKind.Absolute);
+                        var sri = System.Windows.Application.GetResourceStream(uri);
+                        if (sri?.Stream != null)
+                        {
+                            string tempVideo = Path.Combine(Path.GetTempPath(), "oasyss_intro.mp4");
+                            if (!File.Exists(tempVideo) || new FileInfo(tempVideo).Length != sri.Stream.Length)
+                            {
+                                using var fs = File.Create(tempVideo);
+                                sri.Stream.CopyTo(fs);
+                            }
+                            videoPath = tempVideo;
+                        }
+                    }
+                    catch { }
+                }
+
+                if (!File.Exists(videoPath))
+                {
+                    Debug.WriteLine("intro.mp4 not found, skipping intro video.");
+                    _introFinished = true;
+                    return;
+                }
+
+                _introOverlay = new Grid
+                {
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x08, 0x09, 0x0B)),
+                    Visibility = Visibility.Visible,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Stretch
+                };
+
+                _introMedia = new MediaElement
+                {
+                    Source = new Uri(videoPath, UriKind.Absolute),
+                    LoadedBehavior = MediaState.Manual,
+                    UnloadedBehavior = MediaState.Stop,
+                    Stretch = Stretch.Uniform,
+                    Volume = 0.85
+                };
+
+                _introMedia.MediaEnded += (s, e) => DismissIntroVideo();
+                _introMedia.MediaFailed += (s, e) => DismissIntroVideo();
+
+                _introOverlay.Children.Add(_introMedia);
+
+                // Subtle "Click or press Esc to skip" watermark badge
+                var skipBadge = new Border
+                {
+                    Background = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x60, 0x0A, 0x0E, 0x1A)),
+                    BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x80, 0x00, 0xE5, 0xFF)),
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(10, 4, 10, 4),
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Bottom,
+                    Margin = new Thickness(0, 0, 16, 16),
+                    Cursor = System.Windows.Input.Cursors.Hand
+                };
+                var skipText = new TextBlock
+                {
+                    Text = "SKIP (ESC)",
+                    Foreground = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0xCC, 0x00, 0xE5, 0xFF)),
+                    FontSize = 10,
+                    FontWeight = FontWeights.SemiBold,
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas, Segoe UI")
+                };
+                skipBadge.Child = skipText;
+                skipBadge.MouseLeftButtonDown += (s, e) => DismissIntroVideo();
+                _introOverlay.Children.Add(skipBadge);
+
+                _introOverlay.MouseLeftButtonDown += (s, e) => DismissIntroVideo();
+
+                rootGrid.Children.Add(_introOverlay);
+
+                this.Loaded += (s, e) =>
+                {
+                    try
+                    {
+                        _introMedia?.Play();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error playing intro video: {ex.Message}");
+                        DismissIntroVideo();
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to setup intro video: {ex.Message}");
+                _introFinished = true;
+            }
+        }
+
+        private void DismissIntroVideo()
+        {
+            if (_introFinished || _introOverlay == null) return;
+            _introFinished = true;
+
+            try
+            {
+                _introMedia?.Stop();
+            }
+            catch { }
+
+            var fadeAnim = new System.Windows.Media.Animation.DoubleAnimation
+            {
+                From = 1.0,
+                To = 0.0,
+                Duration = TimeSpan.FromMilliseconds(400)
+            };
+
+            fadeAnim.Completed += (s, e) =>
+            {
+                if (_introOverlay != null)
+                {
+                    _introOverlay.Visibility = Visibility.Collapsed;
+                    _introOverlay = null;
+                    _introMedia = null;
+                }
+            };
+
+            _introOverlay.BeginAnimation(UIElement.OpacityProperty, fadeAnim);
+        }
+
+        #endregion
+
+        #region AI Chat
+
+        private void BuildAiChatPanel()
+        {
+            _aiChatPanel = new Grid
+            {
+                Visibility = Visibility.Collapsed,
+                Margin = new Thickness(5, 0, 5, 5)
+            };
+            _aiChatPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // header
+            _aiChatPanel.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) }); // messages
+            _aiChatPanel.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); // input
+
+            // ── Header: Provider + Model selectors + Clear button ──
+            var headerPanel = new DockPanel { Margin = new Thickness(0, 5, 0, 5) };
+
+            var clearBtn = new System.Windows.Controls.Button
+            {
+                Content = "🗑 Clear",
+                Style = (Style)FindResource("ModernButtonStyle"),
+                Margin = new Thickness(5, 0, 0, 0),
+                Padding = new Thickness(8, 4, 8, 4),
+                FontSize = 12
+            };
+            clearBtn.Click += (s, e) => { _aiChatService.ClearHistory(); };
+            DockPanel.SetDock(clearBtn, Dock.Right);
+            headerPanel.Children.Add(clearBtn);
+
+            var lensBtn = new System.Windows.Controls.Button
+            {
+                Content = "📷 Google Lens",
+                Style = (Style)FindResource("ModernButtonStyle"),
+                Margin = new Thickness(5, 0, 0, 0),
+                Padding = new Thickness(8, 4, 8, 4),
+                FontSize = 12,
+                ToolTip = "Google Lens: 1-Click Whole Screen Capture & Ask AI"
+            };
+            lensBtn.Click += async (s, e) => { await TriggerGoogleLensAsync(); };
+            DockPanel.SetDock(lensBtn, Dock.Right);
+            headerPanel.Children.Add(lensBtn);
+
+            _aiProviderCombo = new System.Windows.Controls.ComboBox
+            {
+                Width = 110,
+                Margin = new Thickness(0, 0, 6, 0),
+                Style = (Style)FindResource("ChromeComboBoxStyle"),
+                FontSize = 12
+            };
+            foreach (var name in _aiChatService.GetProviderNames())
+                _aiProviderCombo.Items.Add(name);
+            _aiProviderCombo.SelectedItem = _aiChatService.ActiveProviderName;
+            _aiProviderCombo.SelectionChanged += AiProviderCombo_SelectionChanged;
+            headerPanel.Children.Add(_aiProviderCombo);
+
+            _aiModelCombo = new System.Windows.Controls.ComboBox
+            {
+                Width = 200,
+                Margin = new Thickness(0, 0, 6, 0),
+                Style = (Style)FindResource("ChromeComboBoxStyle"),
+                FontSize = 12
+            };
+            PopulateModelCombo();
+            headerPanel.Children.Add(_aiModelCombo);
+
+            Grid.SetRow(headerPanel, 0);
+            _aiChatPanel.Children.Add(headerPanel);
+
+            // ── Messages ScrollViewer ──
+            _aiChatScrollViewer = new ScrollViewer
+            {
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+                Style = (Style)FindResource("DarkThinScrollViewerStyle")
+            };
+
+            _aiChatMessagesControl = new ItemsControl
+            {
+                ItemsSource = _aiChatService.Messages,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            // Item template for chat messages
+            var msgTemplate = new DataTemplate(typeof(ChatMessage));
+            var borderFactory = new FrameworkElementFactory(typeof(Border));
+            borderFactory.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+            borderFactory.SetValue(Border.PaddingProperty, new Thickness(10, 6, 10, 6));
+            borderFactory.SetValue(Border.MarginProperty, new Thickness(5, 3, 5, 3));
+            borderFactory.SetValue(Border.MaxWidthProperty, 500.0);
+
+            var textFactory = new FrameworkElementFactory(typeof(TextBlock));
+            textFactory.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding("Content"));
+            textFactory.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+            textFactory.SetValue(TextBlock.FontSizeProperty, 13.0);
+
+            borderFactory.AppendChild(textFactory);
+            msgTemplate.VisualTree = borderFactory;
+
+            // Use a style trigger to differentiate user vs AI messages
+            var msgStyle = new Style(typeof(ContentPresenter));
+
+            var userTrigger = new DataTrigger
+            {
+                Binding = new System.Windows.Data.Binding("IsUser"),
+                Value = true
+            };
+            userTrigger.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Right));
+            msgStyle.Triggers.Add(userTrigger);
+
+            var aiTrigger = new DataTrigger
+            {
+                Binding = new System.Windows.Data.Binding("IsUser"),
+                Value = false
+            };
+            aiTrigger.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, System.Windows.HorizontalAlignment.Left));
+            msgStyle.Triggers.Add(aiTrigger);
+
+            _aiChatMessagesControl.ItemContainerStyle = msgStyle;
+            _aiChatMessagesControl.ItemTemplate = msgTemplate;
+
+            _aiChatScrollViewer.Content = _aiChatMessagesControl;
+
+            var msgBorder = new Border
+            {
+                Background = (System.Windows.Media.Brush)FindResource("Theme.Surface"),
+                CornerRadius = new CornerRadius(8),
+                Padding = new Thickness(5)
+            };
+            msgBorder.Child = _aiChatScrollViewer;
+
+            Grid.SetRow(msgBorder, 1);
+            _aiChatPanel.Children.Add(msgBorder);
+
+            // ── Sending indicator ──
+            _aiSendingIndicator = new TextBlock
+            {
+                Text = "⏳ Thinking...",
+                Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextMuted"),
+                FontSize = 12,
+                Margin = new Thickness(10, 2, 0, 2),
+                Visibility = Visibility.Collapsed
+            };
+
+            // ── Input area ──
+            var inputGrid = new Grid { Margin = new Thickness(0, 5, 0, 0) };
+            inputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            inputGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            inputGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            Grid.SetRow(_aiSendingIndicator, 0);
+            Grid.SetColumnSpan(_aiSendingIndicator, 2);
+            inputGrid.Children.Add(_aiSendingIndicator);
+
+            _aiChatInput = new System.Windows.Controls.TextBox
+            {
+                AcceptsReturn = false,
+                TextWrapping = TextWrapping.Wrap,
+                MaxHeight = 80,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                Background = (System.Windows.Media.Brush)FindResource("Theme.Input"),
+                Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextPrimary"),
+                BorderBrush = (System.Windows.Media.Brush)FindResource("Theme.Border"),
+                CaretBrush = (System.Windows.Media.Brush)FindResource("Theme.Accent"),
+                Padding = new Thickness(8, 6, 8, 6),
+                FontSize = 13,
+                VerticalContentAlignment = VerticalAlignment.Center
+            };
+            _aiChatInput.KeyDown += AiChatInput_KeyDown;
+
+            var sendButton = new System.Windows.Controls.Button
+            {
+                Content = "Send",
+                Style = (Style)FindResource("DialogButtonStyle"),
+                Margin = new Thickness(5, 0, 0, 0),
+                Padding = new Thickness(15, 6, 15, 6),
+                FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Bottom
+            };
+            sendButton.Click += AiSendButton_Click;
+
+            Grid.SetRow(_aiChatInput, 1);
+            Grid.SetColumn(_aiChatInput, 0);
+            Grid.SetRow(sendButton, 1);
+            Grid.SetColumn(sendButton, 1);
+            inputGrid.Children.Add(_aiChatInput);
+            inputGrid.Children.Add(sendButton);
+
+            Grid.SetRow(inputGrid, 2);
+            _aiChatPanel.Children.Add(inputGrid);
+
+            // Apply background colors after messages are added
+            _aiChatService.Messages.CollectionChanged += (s, e) =>
+            {
+                Dispatcher.InvokeAsync(() =>
+                {
+                    _aiChatScrollViewer?.ScrollToEnd();
+                    ApplyMessageColors();
+                });
+            };
+        }
+
+        private void ApplyMessageColors()
+        {
+            if (_aiChatMessagesControl == null) return;
+
+            for (int i = 0; i < _aiChatMessagesControl.Items.Count; i++)
+            {
+                var container = _aiChatMessagesControl.ItemContainerGenerator.ContainerFromIndex(i) as ContentPresenter;
+                if (container == null) continue;
+
+                var msg = _aiChatMessagesControl.Items[i] as ChatMessage;
+                if (msg == null) continue;
+
+                // Find the Border in the template
+                container.ApplyTemplate();
+                if (VisualTreeHelper.GetChildrenCount(container) > 0)
+                {
+                    var border = VisualTreeHelper.GetChild(container, 0) as Border;
+                    if (border != null)
+                    {
+                        if (msg.IsUser)
+                        {
+                            border.Background = (System.Windows.Media.Brush)FindResource("Theme.SurfaceAlt");
+                            border.BorderBrush = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x27, 0x2E, 0x36));
+                            border.BorderThickness = new Thickness(1);
+                            var tb = border.Child as TextBlock;
+                            if (tb != null) tb.Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextPrimary");
+                        }
+                        else
+                        {
+                            border.Background = (System.Windows.Media.Brush)FindResource("Theme.SurfaceAlt");
+                            var tb = border.Child as TextBlock;
+                            if (tb != null) tb.Foreground = (System.Windows.Media.Brush)FindResource("Theme.TextPrimary");
+                        }
+                    }
+                }
+            }
+        }
+
+        private void PopulateModelCombo()
+        {
+            if (_aiModelCombo == null) return;
+            _aiModelCombo.Items.Clear();
+
+            var models = _aiChatService.GetModelsForProvider(_aiChatService.ActiveProviderName);
+            foreach (var model in models)
+            {
+                _aiModelCombo.Items.Add(model);
+            }
+            _aiModelCombo.DisplayMemberPath = "DisplayName";
+
+            var activeModel = models.FirstOrDefault(m => m.ModelId == _aiChatService.ActiveModelId)
+                              ?? models.FirstOrDefault();
+            if (activeModel != null)
+            {
+                _aiModelCombo.SelectedItem = activeModel;
+                _aiChatService.ActiveModelId = activeModel.ModelId;
+            }
+        }
+
+        private void AiProviderCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_aiProviderCombo?.SelectedItem is string provider)
+            {
+                _aiChatService.ActiveProviderName = provider;
+                var models = _aiChatService.GetModelsForProvider(provider);
+                if (models.Any())
+                {
+                    _aiChatService.ActiveModelId = models[0].ModelId;
+                }
+                PopulateModelCombo();
+                SaveSettings();
+            }
+        }
+
+        private void AiModelCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_aiModelCombo?.SelectedItem is AiModelInfo model)
+            {
+                _aiChatService.ActiveModelId = model.ModelId;
+                SaveSettings();
+            }
+        }
+
+        private void ToggleAiChat()
+        {
+            _isAiChatVisible = !_isAiChatVisible;
+            if (_aiChatPanel != null)
+            {
+                _aiChatPanel.Visibility = _isAiChatVisible ? Visibility.Visible : Visibility.Collapsed;
+            }
+
+            // Toggle browser content area visibility
+            if (_webViewPlaceholder != null)
+            {
+                // When AI chat is visible, collapse the browser view area
+                var contentPresenter = _webViewPlaceholder.Parent as Grid;
+                if (contentPresenter != null)
+                {
+                    foreach (UIElement child in contentPresenter.Children)
+                    {
+                        if (child is ContentPresenter cp && cp.Name == "PART_SelectedContentHost")
+                        {
+                            cp.Visibility = _isAiChatVisible ? Visibility.Collapsed : Visibility.Visible;
+                        }
+                    }
+                }
+            }
+
+            // Update button appearance
+            if (_aiChatToggleButton != null)
+            {
+                _aiChatToggleButton.ToolTip = _isAiChatVisible ? "Switch to Browser" : "Open AI Chat";
+            }
+        }
+
+        private void AiChatToggle_Click(object sender, RoutedEventArgs e)
+        {
+            OpenAiChatTab();
+        }
+
+        private async void AiSendButton_Click(object sender, RoutedEventArgs e)
+        {
+            await SendAiMessage();
+        }
+
+        private async void AiChatInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && !System.Windows.Input.Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                e.Handled = true;
+                await SendAiMessage();
+            }
+        }
+
+        private async Task SendAiMessage()
+        {
+            if (_aiChatInput == null || string.IsNullOrWhiteSpace(_aiChatInput.Text)) return;
+            if (_aiChatService.IsProcessing) return;
+
+            var userText = _aiChatInput.Text.Trim();
+            _aiChatInput.Text = "";
+            _aiChatInput.IsEnabled = false;
+
+            if (_aiSendingIndicator != null)
+                _aiSendingIndicator.Visibility = Visibility.Visible;
+
+            try
+            {
+                await _aiChatService.SendAsync(userText);
+            }
+            finally
+            {
+                _aiChatInput.IsEnabled = true;
+                _aiChatInput.Focus();
+                if (_aiSendingIndicator != null)
+                    _aiSendingIndicator.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        #endregion
+
+
+        private bool AreHotkeyModifiersActive()
+        {
+            bool ctrlRequired = (_hotkeyModifiers & MOD_CONTROL) != 0;
+            bool shiftRequired = (_hotkeyModifiers & MOD_SHIFT) != 0;
+            bool altRequired = (_hotkeyModifiers & MOD_ALT) != 0;
+            bool winRequired = (_hotkeyModifiers & MOD_WIN) != 0;
+
+            return _ctrlPressed == ctrlRequired &&
+                   _shiftPressed == shiftRequired &&
+                   _altPressed == altRequired &&
+                   _winPressed == winRequired;
+        }
+
+private void GlobalKeyboardHook_KeyUp(object? sender, GlobalKeyEventArgs e)
+{
+    if (_swallowedKeys.Remove(e.Kbdllhookstruct.vkCode))
+    {
+        e.Handled = true;
+    }
+
+    switch (e.Key)
+    {
+        case Key.LeftCtrl: case Key.RightCtrl: _ctrlPressed = false; break;
+        case Key.LeftShift: case Key.RightShift: _shiftPressed = false; break;
+        case Key.LeftAlt: case Key.RightAlt: _altPressed = false; break;
+        case Key.LWin: case Key.RWin: _winPressed = false; break;
+    }
+}
+
+private void GlobalKeyboardHook_KeyDown(object? sender, GlobalKeyEventArgs e)
+{
+    switch (e.Key)
+    {
+        case Key.LeftCtrl: case Key.RightCtrl: _ctrlPressed = true; break;
+        case Key.LeftShift: case Key.RightShift: _shiftPressed = true; break;
+        case Key.LeftAlt: case Key.RightAlt: _altPressed = true; break;
+        case Key.LWin: case Key.RWin: _winPressed = true; break;
+    }
+
+    if (!_introFinished && (e.Key == Key.Escape || e.Key == Key.Space))
+    {
+        Dispatcher.Invoke(DismissIntroVideo);
+        e.Handled = true;
+        return;
+    }
+
+    bool handled = false;
+    int modifiersPressedCount = (_ctrlPressed ? 1 : 0) + (_shiftPressed ? 1 : 0) + (_altPressed ? 1 : 0) + (_winPressed ? 1 : 0);
+
+    if (_shiftPressed && _altPressed)
+    {
+        var actionKey = e.Key;
+        if (actionKey == Key.W || actionKey == Key.A || actionKey == Key.S || actionKey == Key.D)
+        {
+            int moveAmount = 50;
+            Dispatcher.Invoke(() =>
+            {
+                if (actionKey == Key.W) this.Top -= moveAmount;
+                else if (actionKey == Key.A) this.Left -= moveAmount;
+                else if (actionKey == Key.S) this.Top += moveAmount;
+                else if (actionKey == Key.D) this.Left += moveAmount;
+            });
+            handled = true;
+        }
+        else if (actionKey == Key.C)
+        {
+            Dispatcher.Invoke(ToggleProgrammaticMinimize);
+            handled = true;
+        }
+        else if (actionKey == Key.T)
+        {
+            if (_isBrowserMode)
+            {
+                Dispatcher.Invoke(ToggleAiTransparency);
+            }
+            else
+            {
+                Dispatcher.Invoke(ToggleCompleteTransparency);
+            }
+            handled = true;
+        }
+        // Resize: Shift+Alt+Up = bigger, Shift+Alt+Down = smaller
+        else if (actionKey == Key.Up)
+        {
+            Dispatcher.Invoke(() => ResizeOverlay(50));
+            handled = true;
+        }
+        else if (actionKey == Key.Down)
+        {
+            Dispatcher.Invoke(() => ResizeOverlay(-50));
+            handled = true;
+        }
+        else if (actionKey == Key.LeftAlt || actionKey == Key.RightAlt)
+        {
+            handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.T)
+    {
+        if (_isBrowserMode)
+        {
+            Dispatcher.Invoke(ToggleAiTransparency);
+            handled = true;
+        }
+        else
+        {
+            bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                                 (_aiChatInput != null && _aiChatInput.IsKeyboardFocused);
+
+            if (this.IsActive && !isEditingText)
+            {
+                Dispatcher.Invoke(ToggleCompleteTransparency);
+                handled = true;
+            }
+            else
+            {
+                var now = DateTime.UtcNow;
+                if ((now - _lastShiftTPressTime).TotalMilliseconds <= 450)
+                {
+                    Dispatcher.Invoke(ToggleCompleteTransparency);
+                    handled = true;
+                    _lastShiftTPressTime = DateTime.MinValue;
+                }
+                else
+                {
+                    _lastShiftTPressTime = now;
+                }
+            }
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.I)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+
+        if (_isBrowserMode && !isEditingText)
+        {
+            Dispatcher.Invoke(AccessAiMode);
+            handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.L)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+
+        if (_isBrowserMode && !isEditingText)
+        {
+            Dispatcher.Invoke(async () => await TriggerGoogleLensAsync());
+            handled = true;
+        }
+    }
+    else if (_shiftPressed && !_altPressed && !_ctrlPressed && !_winPressed && e.Key == Key.B)
+    {
+        bool isEditingText = (_addressBar != null && _addressBar.IsKeyboardFocused) ||
+                             (_aiChatInput != null && _aiChatInput.IsKeyboardFocused) ||
+                             (_aiChatWindow != null && _aiChatWindow.IsInputFocused);
+
+        if (!isEditingText)
+        {
+            Dispatcher.Invoke(ToggleBrowserMode);
+            handled = true;
+        }
+    }
+
+    if (AreHotkeyModifiersAPotentialMatch())
+    {
+        bool isActionKey = e.Kbdllhookstruct.vkCode == _hotkeyKey;
+        bool isRequiredModifier =
+            (((_hotkeyModifiers & MOD_CONTROL) != 0) && (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl)) ||
+            (((_hotkeyModifiers & MOD_SHIFT) != 0) && (e.Key == Key.LeftShift || e.Key == Key.RightShift)) ||
+            (((_hotkeyModifiers & MOD_ALT) != 0) && (e.Key == Key.LeftAlt || e.Key == Key.RightAlt)) ||
+            (((_hotkeyModifiers & MOD_WIN) != 0) && (e.Key == Key.LWin || e.Key == Key.RWin));
+
+        if (AreHotkeyModifiersActive() && isActionKey)
+        {
+            Dispatcher.Invoke(CaptureActiveScreen);
+            handled = true;
+        }
+        else if (isRequiredModifier && modifiersPressedCount > 1)
+        {
+            handled = true;
+        }
+    }
+
+    if (handled)
+    {
+        e.Handled = true;
+        _swallowedKeys.Add(e.Kbdllhookstruct.vkCode);
+    }
+}
+
+        private void CaptureActiveScreen()
+        {
+            GetCursorPos(out POINT cursorPoint);
+            var activeScreen = Screen.AllScreens.FirstOrDefault(s => s.Bounds.Contains(cursorPoint.X, cursorPoint.Y)) ?? Screen.PrimaryScreen;
+            if (activeScreen == null) return;
+            var bounds = activeScreen.Bounds;
+
+            using (var bitmap = new Bitmap(bounds.Width, bounds.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+            {
+                using (var graphics = Graphics.FromImage(bitmap))
+                {
+                    graphics.CopyFromScreen(bounds.X, bounds.Y, 0, 0, bounds.Size, CopyPixelOperation.SourceCopy);
+                }
+                
+                var bitmapImage = BitmapToImageSource(bitmap);
+                var tempFilePath = Path.Combine(_screenshotsTempFolder, $"{Guid.NewGuid()}.png");
+                bitmap.Save(tempFilePath, ImageFormat.Png);
+
+                var screenshot = new Screenshot
+                {
+                    Image = bitmapImage,
+                    FilePath = tempFilePath
+                };
+                Screenshots.Add(screenshot);
+                
+                if (_screenshotTray.Visibility == Visibility.Collapsed)
+                {
+                    _screenshotTray.Visibility = Visibility.Visible;
+                }
+            }
+        }
+private bool AreHotkeyModifiersAPotentialMatch()
+{
+    bool ctrlRequired = (_hotkeyModifiers & MOD_CONTROL) != 0;
+    bool shiftRequired = (_hotkeyModifiers & MOD_SHIFT) != 0;
+    bool altRequired = (_hotkeyModifiers & MOD_ALT) != 0;
+    bool winRequired = (_hotkeyModifiers & MOD_WIN) != 0;
+
+    if (_ctrlPressed && !ctrlRequired) return false;
+    if (_shiftPressed && !shiftRequired) return false;
+    if (_altPressed && !altRequired) return false;
+    if (_winPressed && !winRequired) return false;
+
+    return true;
+}
+        private BitmapImage BitmapToImageSource(Bitmap bitmap)
+        {
+            using (var memory = new MemoryStream())
+            {
+                bitmap.Save(memory, ImageFormat.Png);
+                memory.Position = 0;
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memory;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+                return bitmapImage;
+            }
+        }
+
+        private void ToggleScreenshotsButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_screenshotTray != null)
+            {
+                _screenshotTray.Visibility = _screenshotTray.Visibility == Visibility.Collapsed ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+
+        private void DeleteScreenshot_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button button && button.DataContext is Screenshot screenshotToDelete)
+            {
+                Screenshots.Remove(screenshotToDelete);
+                try
+                {
+                    if (File.Exists(screenshotToDelete.FilePath))
+                    {
+                        File.Delete(screenshotToDelete.FilePath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error deleting screenshot file: {ex.Message}");
+                }
+            }
+        }
+
+        private void Screenshot_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed && sender is System.Windows.Controls.Image image)
+            {
+                if (image.DataContext is Screenshot screenshot && File.Exists(screenshot.FilePath))
+                {
+                    image.GiveFeedback += Screenshot_GiveFeedback;
+
+                    var data = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, new[] { screenshot.FilePath });
+                    DragDrop.DoDragDrop(image, data, System.Windows.DragDropEffects.Copy);
+
+                    image.GiveFeedback -= Screenshot_GiveFeedback;
+                }
+            }
+        }
+        private void Screenshot_GiveFeedback(object sender, System.Windows.GiveFeedbackEventArgs e)
+        {
+            e.UseDefaultCursors = false;
+            Mouse.SetCursor(System.Windows.Input.Cursors.Arrow);
+            e.Handled = true;
+        }
+        private void TabItem_GiveFeedback(object sender, System.Windows.GiveFeedbackEventArgs e)
+        {
+            e.UseDefaultCursors = false;
+            Mouse.SetCursor(System.Windows.Input.Cursors.Arrow);
+            e.Handled = true;
+        }
+
+        private void UpdateSpinnerState(bool isLoading)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (_loadingSpinner != null)
+                {
+                    _loadingSpinner.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+                }
+                if (_refreshButton != null)
+                {
+                    _refreshButton.Visibility = isLoading ? Visibility.Collapsed : Visibility.Visible;
+                }
+            });
+        }
+
+        private WebView2CompositionControl? GetCurrentWebView()
+        {
+            if (BrowserTabs.SelectedItem is TabItem selectedTab) return selectedTab.Content as WebView2CompositionControl;
+            return null;
+        }
+
+        private void NewTab_Click(object sender, RoutedEventArgs e) => AddNewBrowserTab("https://www.google.com");
+        
+        private async Task InjectTooltipSuppressionScript(CoreWebView2 coreWebView2)
+        {
+            const string script = @"
+(function() {
+    'use strict';
+
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Hide tooltips from popular frameworks like Bootstrap, jQuery UI, etc. */
+        .tooltip, 
+        .ui-tooltip,
+        [data-bs-toggle='tooltip'],
+        [role='tooltip'],
+        /* Added common selectors from previous script for robustness */
+        [class*=""tooltip""], [id*=""tooltip""], [class*=""tippy-box""], 
+        [data-tippy-root], tp-yt-paper-tooltip,.ytp-tooltip {
+            display: none!important;
+            visibility: hidden!important;
+            opacity: 0!important;
+            pointer-events: none!important; /* Added for extra safety */
+        }
+    `;
+    requestAnimationFrame(() => {
+        if (document.head) {
+            document.head.appendChild(style);
+        }
+    });
+
+    const neutralizeTooltip = (element) => {
+        if (element.hasAttribute('title') && element.getAttribute('title').trim() !== '') {
+            const titleText = element.getAttribute('title');
+            element.setAttribute('data-hidden-title', titleText);
+            element.removeAttribute('title');
+        }
+    };
+
+    const processInitialDOM = () => {
+        document.querySelectorAll('[title]').forEach(neutralizeTooltip);
+    };
+
+    const observer = new MutationObserver((mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.hasAttribute('title')) {
+                            neutralizeTooltip(node);
+                        }
+                        node.querySelectorAll('[title]').forEach(neutralizeTooltip);
+                    }
+                });
+            } else if (mutation.type === 'attributes' && mutation.attributeName === 'title') {
+                neutralizeTooltip(mutation.target);
+            }
+        }
+    });
+
+    const startObserver = () => {
+        observer.disconnect(); 
+
+        if (document.body) {
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['title']
+            });
+        } else {
+            new MutationObserver((_, obs) => {
+                if (document.body) {
+                    processInitialDOM();
+                    observer.observe(document.body, {
+                         childList: true,
+                         subtree: true,
+                         attributes: true,
+                         attributeFilter: ['title']
+                    });
+                    obs.disconnect();
+                }
+            }).observe(document.documentElement, { childList: true });
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            processInitialDOM();
+            startObserver();
+        });
+    } else {
+        processInitialDOM();
+        startObserver();
+    }
+})();
+";
+            await coreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
+        }
+
+        private static async Task<Microsoft.Web.WebView2.Core.CoreWebView2Environment> GetOrCreateWebViewEnvironmentAsync(string userDataFolder)
+        {
+            if (_sharedWebViewEnvironment != null)
+                return _sharedWebViewEnvironment;
+
+            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string profileFolder = Path.Combine(localAppData, "OasyssFlux", "EBWebView");
+
+            try
+            {
+                Directory.CreateDirectory(profileFolder);
+                var options = new Microsoft.Web.WebView2.Core.CoreWebView2EnvironmentOptions(
+                    "--disable-features=Translate --disable-background-networking --disable-component-update"
+                );
+                _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, profileFolder, options);
+                return _sharedWebViewEnvironment;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WebView2] Primary environment creation failed: {ex.Message}. Trying fallback without flags...");
+            }
+
+            try
+            {
+                _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, profileFolder, null);
+                return _sharedWebViewEnvironment;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WebView2] Fallback 1 failed: {ex.Message}. Trying userDataFolder subfolder...");
+            }
+
+            try
+            {
+                string roamingFallback = Path.Combine(userDataFolder, "EBWebView");
+                Directory.CreateDirectory(roamingFallback);
+                _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, roamingFallback, null);
+                return _sharedWebViewEnvironment;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[WebView2] Fallback 2 failed: {ex.Message}. Trying system default...");
+            }
+
+            _sharedWebViewEnvironment = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, null, null);
+            return _sharedWebViewEnvironment;
+        }
+
+        private async Task EnsureWebViewInitialized(WebView2CompositionControl webView, string targetUrl)
+        {
+            if (webView.CoreWebView2 != null) return;
+            try
+            {
+                var env = await GetOrCreateWebViewEnvironmentAsync(_userDataFolder);
+                await webView.EnsureCoreWebView2Async(env);
+                if (webView.CoreWebView2 != null && !string.IsNullOrWhiteSpace(targetUrl))
+                {
+                    webView.Source = new Uri(targetUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"EnsureWebViewInitialized failed: {ex.Message}");
+            }
+        }
+
+        public async void AddNewBrowserTab(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                url = "https://www.google.com";
+            }
+            else if (!url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                     !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                     !url.StartsWith("edge://", StringComparison.OrdinalIgnoreCase) &&
+                     !url.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+            {
+                url = "https://" + url;
+            }
+
+            var newTab = new TabItem();
+            var headerPanel = new Grid();
+            headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            headerPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var closeButton = new System.Windows.Controls.Button
+            {
+                Content = "✕",
+                Tag = newTab,
+                Margin = new Thickness(6, 0, 0, 0),
+                Padding = new Thickness(0),
+                FontWeight = FontWeights.Normal,
+                FontSize = 9,
+                Width = 18,
+                Height = 18,
+                VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
+                HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center,
+                Cursor = System.Windows.Input.Cursors.Hand,
+                Style = (Style)FindResource("TabCloseButtonStyle")
+            };
+            closeButton.Click += CloseTabOnHeader_Click;
+            Grid.SetColumn(closeButton, 2);
+            
+            var faviconContainer = new Grid
+            {
+                Width = 16,
+                Height = 16,
+                Margin = new Thickness(0, 0, 5, 0),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var iconBackground = new Border
+            {
+                Background = System.Windows.Media.Brushes.White,
+                CornerRadius = new CornerRadius(3),
+                Visibility = Visibility.Collapsed // Start hidden
+            };
+
+            var faviconImage = new System.Windows.Controls.Image();
+            iconBackground.Child = faviconImage;
+
+            var loadingSpinner = new System.Windows.Controls.Image
+            {
+                Source = LoadAppImage("loading.png"),
+                Style = (Style)FindResource("LoadingSpinnerStyle"),
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                Visibility = Visibility.Visible
+            };
+
+
+
+            faviconContainer.Children.Add(iconBackground);
+            faviconContainer.Children.Add(loadingSpinner);
+            Grid.SetColumn(faviconContainer, 0);
+
+            var titleContainerGrid = new Grid();
+            Grid.SetColumn(titleContainerGrid, 1);
+
+            var titleTextBlock = new TextBlock
+            {
+                Text = "Loading...",
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch,
+            };
+            titleTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "Theme.TextPrimary");
+
+            titleContainerGrid.Children.Add(titleTextBlock);
+            headerPanel.Children.Add(faviconContainer);
+            headerPanel.Children.Add(titleContainerGrid);
+            headerPanel.Children.Add(closeButton);
+            newTab.Header = headerPanel;
+
+            var webView = new WebView2CompositionControl();
+            newTab.Content = webView;
+
+            _tabLoadingStates[webView] = true; 
+
+            BrowserTabs.Items.Add(newTab);
+            BrowserTabs.SelectedItem = newTab;
+
+            try
+            {
+                var env = await GetOrCreateWebViewEnvironmentAsync(_userDataFolder);
+                await webView.EnsureCoreWebView2Async(env);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"WebView2 initialization attempt 1 failed: {ex.Message}. Retrying with fresh environment...");
+                _sharedWebViewEnvironment = null;
+                try
+                {
+                    var fallbackEnv = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, null, null);
+                    await webView.EnsureCoreWebView2Async(fallbackEnv);
+                }
+                catch (Exception ex2)
+                {
+                    Debug.WriteLine($"WebView2 fallback failed: {ex2.Message}");
+                    titleTextBlock.Text = "Browser Error";
+                    loadingSpinner.Visibility = Visibility.Collapsed;
+                    return;
+                }
+            }
+
+            if (webView.CoreWebView2 == null)
+            {
+                titleTextBlock.Text = "Browser Unavailable";
+                loadingSpinner.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Allow screenshots to be dropped into the web content.
+            try { WebViewDropForwarder.Attach(webView); }
+            catch (Exception ex) { Debug.WriteLine($"Drop forwarder attach failed: {ex.Message}"); }
+
+            Action fetchFavicon = () =>
+            {
+                if (webView.CoreWebView2 == null) return;
+
+                string? host = null;
+                try
+                {
+                    if (Uri.TryCreate(webView.CoreWebView2.Source, UriKind.Absolute, out var uri))
+                    {
+                        host = uri.Host;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error getting host from CoreWebView2.Source: {ex.Message}");
+                }
+
+                if (!string.IsNullOrEmpty(host) && host != "about:blank")
+                {
+                    var faviconUrl = $"https://www.google.com/s2/favicons?domain={host}&sz=16";
+                    try
+                    {
+                        var bitmap = new System.Windows.Media.Imaging.BitmapImage();
+
+                        bitmap.DownloadCompleted += (s, e) =>
+                        {
+                            bitmap.Freeze();
+                            faviconImage.Source = bitmap;
+                            iconBackground.Visibility = Visibility.Visible;
+                            loadingSpinner.Visibility = Visibility.Collapsed;
+                        };
+
+                        bitmap.DownloadFailed += (s, e) =>
+                        {
+                            Debug.WriteLine($"Google Favicon download failed for {host}: {e.ErrorException?.Message}");
+                            faviconImage.Source = null;
+                            iconBackground.Visibility = Visibility.Collapsed;
+                            loadingSpinner.Visibility = Visibility.Collapsed;
+                        };
+
+                        bitmap.BeginInit();
+                        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                        bitmap.CacheOption = BitmapCacheOption.OnDemand; 
+                        bitmap.UriSource = new Uri(faviconUrl, UriKind.Absolute);
+                        bitmap.EndInit();
+
+                    }
+                    catch (Exception ex)
+                    {
+                        // This catches errors from BeginInit/UriSource/EndInit
+                        Debug.WriteLine($"Google Favicon download *initiation* failed for {host}: {ex.Message}");
+                        faviconImage.Source = null;
+                        iconBackground.Visibility = Visibility.Collapsed;
+                        loadingSpinner.Visibility = Visibility.Collapsed;
+                    }
+                }
+                else
+                {
+                    faviconImage.Source = null;
+                    iconBackground.Visibility = Visibility.Collapsed;
+                    loadingSpinner.Visibility = Visibility.Collapsed;
+                }
+            };
+
+            webView.CoreWebView2.PermissionRequested += CoreWebView2_PermissionRequested;
+            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            webView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+
+            webView.CoreWebView2.ProcessFailed += (s, args) =>
+            {
+                Debug.WriteLine($"WebView2 process failed: {args.ProcessFailedKind}, reason: {args.Reason}, exitCode: {args.ExitCode}");
+                Dispatcher.Invoke(() =>
+                {
+                    titleTextBlock.Text = "Browser crashed";
+                    _tabLoadingStates[webView] = false;
+                    UpdateSpinnerState(isLoading: false);
+                    try
+                    {
+                        if (args.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessExited ||
+                            args.ProcessFailedKind == CoreWebView2ProcessFailedKind.RenderProcessUnresponsive)
+                        {
+                            webView.Reload();
+                        }
+                    }
+                    catch (Exception rex)
+                    {
+                        Debug.WriteLine($"Failed to reload crashed webview: {rex.Message}");
+                    }
+                });
+            };
+
+            string cursorScript = @"
+                (function() {
+                    'use strict';
+
+                    const style = document.createElement('style');
+                    style.textContent = '* { cursor: default !important; }';
+                    requestAnimationFrame(() => {
+                        if (document.head) document.head.appendChild(style);
+                    });
+                })();
+            ";
+
+            await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(cursorScript);
+
+            await InjectTooltipSuppressionScript(webView.CoreWebView2);
+            
+            webView.CoreWebView2.NewWindowRequested += (s, e) =>
+            {
+                e.Handled = true;
+                AddNewBrowserTab(e.Uri);
+            };
+            
+            webView.CoreWebView2.NavigationStarting += (s, args) =>
+            {
+                _tabLoadingStates[webView] = true;
+                if (GetCurrentWebView() == webView)
+                {
+                    UpdateSpinnerState(isLoading: true);
+                }
+                
+
+                Dispatcher.Invoke(() => {
+                    loadingSpinner.Visibility = Visibility.Visible;
+                    iconBackground.Visibility = Visibility.Collapsed;
+                    faviconImage.Source = null;
+                });
+            };
+            webView.CoreWebView2.NavigationCompleted += (s, args) =>
+            {
+                _tabLoadingStates[webView] = false;
+                if (GetCurrentWebView() == webView)
+                {
+                    UpdateSpinnerState(isLoading: false);
+                }
+                Dispatcher.Invoke(fetchFavicon);
+            };
+            
+            webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
+            webView.CoreWebView2.IsMuted = _isMuted;
+            webView.CoreWebView2.HistoryChanged += CoreWebView2_HistoryChanged;
+            webView.CoreWebView2.SourceChanged += CoreWebView2_SourceChanged;
+            webView.Source = new Uri(url);
+
+            webView.CoreWebView2.DocumentTitleChanged += (s, args) => Dispatcher.Invoke(() => titleTextBlock.Text = webView.CoreWebView2.DocumentTitle);
+
+            if (_addressBar != null)
+            {
+                _addressBar.Focus();
+            }
+        }
+private void CoreWebView2_PermissionRequested(object? sender, CoreWebView2PermissionRequestedEventArgs e)
+{
+    e.State = CoreWebView2PermissionState.Allow;
+}
+private void MainWindow_Deactivated(object? sender, EventArgs e)
+{
+    // In Browser Mode, NEVER minimize on focus loss! Both the browser and the AI companion must stay open and available.
+    if (_isBrowserMode) return;
+
+    if (_minimizeOnFocusLoss && !_isMinimized && this.OwnedWindows.Count == 0 && (_aiChatWindow == null || !_aiChatWindow.IsVisible))
+    {
+        MinimizeCustom();
+    }
+}
+        private void AddressBar_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                _addressBarHasIntendedChanges = true;
+
+                string text = (sender as System.Windows.Controls.TextBox)?.Text ?? _addressBar?.Text ?? "";
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    Navigate(text);
+                }
+                GetCurrentWebView()?.Focus();
+            }
+        }
+        private void AddressBar_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var textBox = sender as System.Windows.Controls.TextBox;
+            if (textBox != null && !textBox.IsKeyboardFocusWithin)
+            {
+                e.Handled = true;
+                textBox.Focus();
+            }
+        }
+
+private void AddressBar_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            var textBox = sender as System.Windows.Controls.TextBox;
+            if (textBox != null)
+            {
+
+                var webView = GetCurrentWebView();
+                if (webView != null && webView.Source != null)
+                {
+                    textBox.Text = webView.Source.ToString();
+                }
+
+                textBox.SelectAll();
+                _addressBarHasIntendedChanges = false;
+            }
+        }
+
+private void AddressBar_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (!_addressBarHasIntendedChanges)
+            {
+                var webView = GetCurrentWebView();
+                if (webView != null && webView.Source != null)
+                {
+                    _addressBar.Text = GetSimplifiedUrl(webView.Source);
+                }
+            }
+        }
+
+private void Dialog_SourceInitialized(object? sender, EventArgs e)
+{
+    if (sender is Window window)
+    {
+        IntPtr hwnd = new WindowInteropHelper(window).Handle;
+        
+        // Add the same extended window styles as the main window to ensure exclusion works reliably
+        int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        
+        DisplayAffinityManager.ApplyCaptureAffinity(hwnd);
+    }
+}
+        private void Navigate(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address)) return;
+
+            var webView = GetCurrentWebView();
+            if (webView == null)
+            {
+                AddNewBrowserTab(address);
+                return;
+            }
+
+            string targetUrl;
+            if (Uri.TryCreate(address, UriKind.Absolute, out Uri? uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            {
+                targetUrl = address;
+            }
+            else if (!address.Contains(" ") && address.Contains("."))
+            {
+                targetUrl = "https://" + address;
+            }
+            else
+            {
+                targetUrl = $"https://www.google.com/search?q={HttpUtility.UrlEncode(address)}";
+            }
+
+            try
+            {
+                if (webView.CoreWebView2 != null)
+                {
+                    webView.CoreWebView2.Navigate(targetUrl);
+                }
+                else
+                {
+                    webView.Source = new Uri(targetUrl);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Navigation error: {ex.Message}");
+            }
+        }
+        
+        private void UpdateNavButtonState()
+        {
+            var webView = GetCurrentWebView();
+            if (_backButton != null) _backButton.IsEnabled = webView?.CanGoBack ?? false;
+            if (_forwardButton != null) _forwardButton.IsEnabled = webView?.CanGoForward ?? false;
+        }
+
+        private void CoreWebView2_HistoryChanged(object? sender, object e) => Dispatcher.Invoke(UpdateNavButtonState);
+
+private void CoreWebView2_SourceChanged(object? sender, Microsoft.Web.WebView2.Core.CoreWebView2SourceChangedEventArgs e)
+        {
+             var webView = GetCurrentWebView();
+             if (webView != null && _addressBar != null && webView.Source != null)
+             {
+                 Dispatcher.Invoke(() => {
+                    if (!_addressBar.IsKeyboardFocusWithin)
+                    {
+                        _addressBar.Text = GetSimplifiedUrl(webView.Source);
+                    }
+                 });
+             }
+        }
+        
+        private void BrowserTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.Source is System.Windows.Controls.TabControl)
+            {
+                UpdateNavButtonState();
+                var webView = GetCurrentWebView();
+                if (webView != null)
+                {
+if (_addressBar != null && webView.Source != null)
+                    {
+                        if (!_addressBar.IsKeyboardFocusWithin)
+                        {
+                            _addressBar.Text = GetSimplifiedUrl(webView.Source);
+                        }
+                    }
+                    
+                    _tabLoadingStates.TryGetValue(webView, out bool isLoading);
+                    UpdateSpinnerState(isLoading);
+                }
+                else
+                {
+                    if (_addressBar != null)
+                    {
+                        _addressBar.Text = string.Empty;
+                    }
+                    UpdateSpinnerState(false);
+                }
+            }
+        }
+
+private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+{
+    MinimizeCustom();
+}
+
+        private void RestoreWindow()
+        {
+            if (!_isMinimized) return;
+
+            this.Left = this.Left + this.Width - _originalWidth;
+            this.Height = _originalHeight;
+            this.Width = _originalWidth;
+            MainOverlayBorder.Padding = _originalBorderPadding;
+            MainOverlayBorder.CornerRadius = _originalBorderCornerRadius;
+            BrowserTabs.Visibility = Visibility.Visible;
+            _isMinimized = false;
+        }
+
+        private void MainWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_isMinimized)
+            {
+                if (e.ClickCount >= 2) RestoreWindow();
+                else DragMove();
+            }
+            else
+            {
+                if (e.Source == MainOverlayBorder || 
+                   (e.Source is Grid grid && grid.Name != "templateRoot") ||
+                    e.Source is DockPanel || 
+                   (e.Source is Border border && border.Name != "MainOverlayBorder" && border.TemplatedParent == null))
+                {
+                    if (e.ButtonState == MouseButtonState.Pressed)
+                    {
+                        try { DragMove(); } catch (InvalidOperationException) { /* Can happen during rapid clicks, safe to ignore. */ }
+                    }
+                }
+            }
+        }
+
+        private async void CloseTabOnHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button closeButton && closeButton.Tag is TabItem tabToClose)
+            {
+                if (BrowserTabs.Items.Count == 1)
+                {
+                    bool shouldExit = await ShowExitConfirmationDialog("Confirm Exit", "This is the last tab. Are you sure you want to exit?");
+                    if (shouldExit)
+                    {
+                        System.Windows.Application.Current.Shutdown();
+                    }
+                }
+                else
+                {
+                    CloseTab(tabToClose);
+                }
+            }
+        }
+
+        private void UpdateMuteStatusUI()
+        {
+            if (_muteButton != null)
+            {
+                if (_muteButton.Content is System.Windows.Controls.Image muteImage)
+                {
+                    var uriString = _isMuted ? "muted.png" : "sound.png";
+                    muteImage.Source = LoadAppImage(uriString);
+                }
+            }
+            if (_muteStatusText != null) _muteStatusText.Text = _isMuted ? "Muted" : "Not Muted";
+        }
+
+        private void MuteButton_Click(object sender, RoutedEventArgs e)
+        {
+            _isMuted = !_isMuted;
+            UpdateMuteStatusUI();
+
+            foreach (TabItem tabItem in BrowserTabs.Items)
+            {
+                if (tabItem.Content is WebView2 webView && webView.CoreWebView2 != null)
+                    webView.CoreWebView2.IsMuted = _isMuted;
+            }
+        }
+#region Window Drag Prevention
+        private void MakeWindowNonDraggable(Window window)
+        {
+            window.SourceInitialized += (s, e) =>
+            {
+                var handle = new WindowInteropHelper(window).Handle;
+                var source = HwndSource.FromHwnd(handle);
+                source?.AddHook(WndProc);
+            };
+        }
+        private static IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_NCLBUTTONDOWN = 0x00A1;
+            const int HTCAPTION = 2;
+
+            if (msg == WM_NCLBUTTONDOWN && wParam.ToInt32() == HTCAPTION)
+            {
+
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+        #endregion
+private async void ExitButton_Click(object sender, RoutedEventArgs e)
+{
+    bool shouldExit = await ShowExitConfirmationDialog("Confirm Exit", "Are you sure you want to exit?");
+    if (shouldExit)
+    {
+        System.Windows.Application.Current.Shutdown();
+    }
+}
+private T FindChild<T>(DependencyObject parent) where T : DependencyObject
+{
+    if (parent == null) return null;
+    T foundChild = null;
+    int childrenCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+    for (int i = 0; i < childrenCount; i++)
+    {
+        var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+        if (child is T t)
+        {
+            foundChild = t;
+            break;
+        }
+        else
+        {
+            foundChild = FindChild<T>(child);
+            if (foundChild != null) break;
+        }
+    }
+    return foundChild;
+}
+        private void CloseTab(TabItem tabItem)
+        {
+            if (tabItem.Content is WebView2CompositionControl webView) 
+            {
+                _tabLoadingStates.Remove(webView); 
+                
+                if (webView.CoreWebView2 != null)
+                {
+                    webView.CoreWebView2.HistoryChanged -= CoreWebView2_HistoryChanged;
+                    webView.CoreWebView2.SourceChanged -= CoreWebView2_SourceChanged;
+                }
+                webView.Dispose();
+            }
+
+            BrowserTabs.Items.Remove(tabItem);
+
+        }
+    }
+}

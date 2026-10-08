@@ -21,8 +21,8 @@ publish-pure-single/
 *.pdb
 
 # Allow the pre-built standalone executable in Release/
-!**/Release/Oasyss Flux.exe
-!oasyss-flux-windows/Release/Oasyss Flux.exe
+!Release/Oasyss Flux.exe
+/Oasyss Flux.exe
 
 ## OS generated files
 Thumbs.db
@@ -31,15 +31,5 @@ Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
 
-## Local user settings, logs & test data
+## Local user settings / test data
 *.local
-*.log
-startup.log
-*.tmp
-*.tmp.*
-
-## Node / Electron build artifacts
-node_modules/
-**/node_modules/
-dist/
-**/dist/
