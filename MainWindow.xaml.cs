@@ -177,7 +177,7 @@ public class AppSettings
     public string GroqApiKey { get; set; } = "";
     public string ClaudeApiKey { get; set; } = "";
     public string DefaultAiProvider { get; set; } = "Gemini";
-    public string DefaultAiModel { get; set; } = "gemini-2.5-flash";
+    public string DefaultAiModel { get; set; } = GeminiProvider.DefaultModelId;
 
     // Transparency
     public bool TransparentMode { get; set; } = false;
@@ -1441,9 +1441,9 @@ private void LoadSettings()
             _aiChatService.GroqApiKey = SecureStorageHelper.DecryptString(settings.GroqApiKey);
             _aiChatService.ClaudeApiKey = SecureStorageHelper.DecryptString(settings.ClaudeApiKey);
             _aiChatService.ActiveProviderName = settings.DefaultAiProvider ?? "Gemini";
-            if (string.IsNullOrWhiteSpace(settings.DefaultAiModel) || settings.DefaultAiModel == "gemini-3.6-flash" || settings.DefaultAiModel == "gemini-2.5-flash" || settings.DefaultAiModel == "gemini-2.0-flash")
+            if (string.IsNullOrWhiteSpace(settings.DefaultAiModel))
             {
-                settings.DefaultAiModel = "gemini-3.5-flash";
+                settings.DefaultAiModel = GeminiProvider.DefaultModelId;
             }
             _aiChatService.ActiveModelId = settings.DefaultAiModel;
 

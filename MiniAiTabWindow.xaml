@@ -190,7 +190,7 @@
                                 <TextBlock Text="by div" FontSize="8" FontWeight="Bold" Foreground="#C084FC" FontFamily="Segoe UI, Consolas"/>
                             </Border>
                             <Border Background="#1E3A2F" BorderBrush="#34A853" BorderThickness="1" CornerRadius="3" Padding="4,1" Margin="0,0,4,0" VerticalAlignment="Center">
-                                <TextBlock Text="GEMINI • MULTI-VISION" FontSize="8" FontWeight="Bold" Foreground="#34A853" FontFamily="Segoe UI, Consolas"/>
+                                <TextBlock Text="GEMINI" FontSize="8" FontWeight="Bold" Foreground="#34A853" FontFamily="Segoe UI, Consolas"/>
                             </Border>
                             <Border Background="#1A2D42" BorderBrush="#8AB4F8" BorderThickness="1" CornerRadius="3" Padding="4,1" VerticalAlignment="Center">
                                 <TextBlock Text="🛡️ STEALTH" FontSize="8" FontWeight="Bold" Foreground="#8AB4F8" FontFamily="Segoe UI, Consolas"/>
@@ -226,6 +226,7 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
                             <!-- Left Sparkle Icon -->
@@ -246,7 +247,7 @@
                                          PreviewKeyDown="SearchBox_PreviewKeyDown"
                                          TextChanged="SearchBox_TextChanged"/>
                                 <TextBlock x:Name="SearchPlaceholder"
-                                           Text="Search Google AI (Gemini) or ask anything... (Shift+T for Ghost)"
+                                           Text="Ask Gemini — code, questions, or screenshots"
                                            Foreground="#9AA0A6"
                                            IsHitTestVisible="False"
                                            VerticalAlignment="Center"
@@ -270,8 +271,9 @@
                                 <TextBlock Text="✕" FontSize="9" Foreground="#9AA0A6"/>
                             </Button>
 
+                            <Button Grid.Column="4" Content="Web" ToolTip="Gemini website: no API key. Google controls signed-out features." Style="{StaticResource MiniCtrlBtn}" FontSize="10" Click="OpenGeminiWeb_Click"/>
                             <!-- Ask AI Search Pill Button -->
-                            <Button x:Name="BtnAskAi" Grid.Column="3" Content="Ask AI" Style="{StaticResource MiniCtrlBtn}" Padding="9,3" Margin="1"
+                            <Button x:Name="BtnAskAi" Grid.Column="3" Content="Ask" ToolTip="Uses your saved Gemini key; opens Gemini Web if no key is configured" Style="{StaticResource MiniCtrlBtn}" Padding="9,3" Margin="1"
                                     Background="#1A73E8" Foreground="#FFFFFF" FontWeight="SemiBold" FontSize="10.5" Click="BtnAskAi_Click">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -323,6 +325,25 @@
                 </Border>
             </Popup>
 
+            <Border x:Name="GeminiPanel" Grid.Row="1" Visibility="Collapsed" Background="#202124" BorderBrush="#3C4043" BorderThickness="0,1,0,0">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="8,6">
+                        <DockPanel LastChildFill="True">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Content="Copy question" Style="{StaticResource MiniCtrlBtn}" Click="CopyGeminiQuestion_Click"/>
+                                <Button Content="Copy image" Style="{StaticResource MiniCtrlBtn}" Click="CopyGeminiImage_Click"/>
+                                <Button Content="New chat" Style="{StaticResource MiniCtrlBtn}" Click="NewGeminiChat_Click"/>
+                                <Button Content="Reload" Style="{StaticResource MiniCtrlBtn}" Click="ReloadGemini_Click"/>
+                                <Button Content="Collapse" Style="{StaticResource MiniCtrlBtn}" Click="BtnCollapse_Click"/>
+                            </StackPanel>
+                            <TextBlock Text="Gemini · Private session" Foreground="#8AB4F8" FontSize="11" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock x:Name="GeminiStatus" Text="Loading Gemini..." TextWrapping="Wrap" Foreground="#BDC1C6" FontSize="11" Margin="0,5,0,0"/>
+                    </StackPanel>
+                    <Grid x:Name="GeminiBrowserHost" Background="#131314"/>
+                </DockPanel>
+            </Border>
+
             <!-- ROW 1: DIRECT INSTANT ANSWER CARD (NO EXTRA TABS) -->
             <Border x:Name="ResultsPanel" Grid.Row="1" Visibility="Collapsed" Background="#202124" BorderBrush="#3C4043" BorderThickness="0,1,0,0">
                 <Grid>
@@ -352,7 +373,8 @@
 
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="✨" FontSize="11" Margin="0,0,5,0" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="AnswerHeader" Text="✨ AI Overview • by div" FontSize="10.5" FontWeight="SemiBold" Foreground="#8AB4F8" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="MiniGeminiModel" Width="155" Margin="0,0,6,0" FontSize="10" ToolTip="Model for Gemini API answers"/>
+                                <TextBlock x:Name="AnswerHeader" Text="Gemini" FontSize="10.5" FontWeight="SemiBold" Foreground="#8AB4F8" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -362,8 +384,8 @@
                         <!-- Loading State -->
                         <StackPanel x:Name="LoadingIndicator" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
                             <TextBlock Text="✨" FontSize="26" HorizontalAlignment="Center" Foreground="#8AB4F8" Margin="0,0,0,8"/>
-                            <TextBlock Text="Generating Gemini AI Overview..." FontSize="12" FontWeight="SemiBold" Foreground="#E8EAED" HorizontalAlignment="Center"/>
-                            <TextBlock Text="Google Gemini Engine • Zero login • No API key" FontSize="10" Foreground="#34A853" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                            <TextBlock Text="Waiting for Gemini..." FontSize="12" FontWeight="SemiBold" Foreground="#E8EAED" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Using your configured Gemini API key" FontSize="10" Foreground="#34A853" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                         </StackPanel>
 
                         <!-- Answer Scrollable Area -->
@@ -374,11 +396,11 @@
                                     <StackPanel>
                                         <DockPanel LastChildFill="True" Margin="0,0,0,8">
                                             <Border DockPanel.Dock="Right" Background="#1E3A2F" BorderBrush="#34A853" BorderThickness="1" CornerRadius="3" Padding="4,1">
-                                                <TextBlock Text="GEMINI AI • NO LOGIN" FontSize="8" FontWeight="Bold" Foreground="#34A853"/>
+                                                <TextBlock Text="GEMINI API" FontSize="8" FontWeight="Bold" Foreground="#34A853"/>
                                             </Border>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="✨" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                                                <TextBlock Text="AI Overview" FontSize="11" FontWeight="SemiBold" Foreground="#E8EAED" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Gemini response" FontSize="11" FontWeight="SemiBold" Foreground="#E8EAED" VerticalAlignment="Center"/>
                                             </StackPanel>
                                         </DockPanel>
                                         <TextBox x:Name="AnswerBodyText"
@@ -388,7 +410,7 @@
                                                  IsReadOnly="True"
                                                  TextWrapping="Wrap"
                                                  FontSize="12"
-                                                 FontFamily="Segoe UI, Inter"
+                                                 FontFamily="Consolas"
                                                  CaretBrush="#8AB4F8"/>
                                     </StackPanel>
                                 </Border>
